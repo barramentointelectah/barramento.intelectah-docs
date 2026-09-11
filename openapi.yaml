@@ -1,0 +1,4721 @@
+openapi: 3.0.3
+info:
+  title: Barramento de Integração — Neoh × HIS
+  version: '1.0'
+  description: 'Barramento de integração entre o **Neoh** (agendamento cirúrgico) e o **HIS** (sistema de gestão hospitalar). Especificação genérica de contrato — independente do HIS de destino.
+
+
+    Documentado nos **dois sentidos**:
+
+
+    - **Neoh → HIS**: rotas que o Neoh consome do barramento. Autenticação por **Bearer token**; base no servidor do HIS (`{baseUrl}`).
+
+    - **HIS → Neoh**: callbacks que o HIS envia à API do Neoh. Autenticação por headers **`client_id`/`client_secret`**; base no servidor do Neoh.
+
+
+    Cada operação declara em `servers` a base correta e o `security` do seu sentido. Onde o corpo de resposta não tem schema de campos publicado, isso é indicado explicitamente na descrição da rota.'
+servers:
+- url: '{baseUrl}'
+  description: Base do HIS (barramento). Usada por TODAS as rotas do sentido Neoh → HIS. Host + prefixo do barramento, fornecido pela Intelectah/HIS por ambiente.
+  variables:
+    baseUrl:
+      default: https://barramento.hospital.example
+      description: Host + prefixo do barramento do HIS. Fornecido pela Intelectah/HIS por ambiente.
+- url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+  description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+  variables:
+    ambiente:
+      enum:
+      - hml
+      - prd
+      default: hml
+      description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente.'
+tags:
+- name: Neoh→HIS · Autenticação
+  description: Emissão/revogação do Bearer token do Barramento (credenciais em headers hifenizados).
+- name: Neoh→HIS · Paciente & Cadastro
+  description: Localização e cadastro (simplificado/completo) do paciente no HIS.
+- name: Neoh→HIS · Agenda & Mapa
+  description: Consulta de disponibilidade, geração de horários, atualização e cancelamento de agenda, mapa cirúrgico.
+- name: Neoh→HIS · Dados de Referência
+  description: Endpoint único /dados-referencia com 19 entidades de lookup selecionadas por `entidade`.
+- name: Neoh→HIS · Integrar Pedido
+  description: Criação/atualização/remoção dos itens de um Pedido Cirúrgico. 15 áreas sob /integrar-pedido/*, todas POST, roteando por campo `action` no item.
+- name: Neoh→HIS · Edição de Pedido
+  description: Endpoints standalone usados na EDIÇÃO de um pedido já existente, fora da orquestração de /integrar-pedido.
+- name: HIS→Neoh · Callbacks
+  description: Callbacks que o HIS envia para a API do Neoh. Base = servidor Neoh; auth por headers client_id/client_secret.
+- name: Neoh→HIS · Portal do Médico & Painel (novas APIs)
+  description: 'APIs de leitura (GET) para Portal do Médico e Painel Cirúrgico: grade de OPME, checklist de material, procedimentos associados, tempo médio e sugestão de diárias. Contratos funcionais; rotas propostas.'
+security:
+- bearerAuth: []
+paths:
+  /token:
+    post:
+      tags:
+      - Neoh→HIS · Autenticação
+      operationId: emitirToken
+      summary: Emite o Bearer token (client_credentials)
+      security: []
+      servers:
+      - url: '{baseUrl}'
+        description: Base do HIS (barramento). Usada por todas as rotas do sentido Neoh → HIS.
+        variables:
+          baseUrl:
+            default: https://barramento.hospital.example
+            description: Host + prefixo do barramento do HIS. Fornecido pela Intelectah/HIS por ambiente.
+      parameters:
+      - name: Client-ID
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Client ID
+      - name: Client-Secret
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Client secret
+      - name: Grant-Type
+        in: header
+        required: true
+        schema:
+          type: string
+          enum:
+          - client_credentials
+      responses:
+        '200':
+          description: Token emitido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+              example:
+                access_token: eyJhbGciOi...
+                token_type: Bearer
+        '400':
+          description: '|'
+        '401':
+          description: ''
+    delete:
+      tags:
+      - Neoh→HIS · Autenticação
+      operationId: revogarToken
+      summary: Revoga o token ativo
+      security: []
+      servers:
+      - url: '{baseUrl}'
+        description: Base do HIS (barramento). Usada por todas as rotas do sentido Neoh → HIS.
+        variables:
+          baseUrl:
+            default: https://barramento.hospital.example
+            description: Host + prefixo do barramento do HIS. Fornecido pela Intelectah/HIS por ambiente.
+      parameters:
+      - name: Client-ID
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Client-Secret
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Token revogado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: revoked
+        '400':
+          description: ''
+        '401':
+          description: ''
+        '404':
+          description: ''
+  /consultar-paciente:
+    get:
+      tags:
+      - Neoh→HIS · Paciente & Cadastro
+      operationId: consultarPaciente
+      summary: Localiza o paciente no HIS (2 modos)
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: idBupUnidade
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Código da unidade.
+      - name: nrAtendimento
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'Modo 1: número do atendimento no HIS.'
+      - name: cpf
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'Modo 2: CPF do paciente (11 dígitos, sem máscara).'
+      - name: nome
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'Modo 2: nome (ou parte) do paciente.'
+      - name: dataNascimento
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: 'Modo 2: data de nascimento (yyyy-MM-dd).'
+      responses:
+        '200':
+          description: Envelope com a lista de pacientes encontrados (vazia se nenhum).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consultaPaciente:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsultaPacienteItem'
+              example:
+                consultaPaciente:
+                - cdPaciente: 456
+                  nomePaciente: PACIENTE TESTE
+                  sexoPaciente: M
+                  dataNascimento: '1980-01-01'
+                  nomeMae: MAE TESTE
+                  cpfPaciente: '12345678911'
+                  email: teste@teste.com
+                  ddiCelular: 55
+                  dddCelular: 11
+                  celular: '999998888'
+                  cep: '55555000'
+                  endereco: Rua Teste
+                  numero: 5
+                  bairro: Centro
+                  cidade: Recife
+                  uf: PE
+                  pais: Brasil
+                  codigoAtendimento: 123456
+                  codigoConvenio: 1
+                  dsConvenio: Convenio X
+                  codigoPlano: 1
+                  dsPlano: Plano Y
+                  numeroCarteirinha: '123456789'
+                  pacienteOncologico: N
+        '400':
+          description: Nenhum critério de busca informado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+        '401':
+          description: Sem token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+      description: "Consulta o paciente no HIS. Dois modos de busca, ambos retornando o **mesmo envelope** `{ \"consultaPaciente\": [ ... ] }` (array, mesmo para 1 paciente):\n\n- **Por nº de atendimento** — enviar `idBupUnidade` + `nrAtendimento`.\n- **Por dados do paciente** — enviar `idBupUnidade` + ao menos um de `cpf` / `nome` / `dataNascimento`.\n\nOrigem no código: `Barramento.cs › ConsultarPacienteGeralAsync`, `PacienteBarramentoDTO`, `ItemPacienteBarramentoGeral`."
+  /cadastro-simplificado:
+    post:
+      tags:
+      - Neoh→HIS · Paciente & Cadastro
+      operationId: cadastroSimplificado
+      summary: Cria paciente mínimo
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroSimplificadoRequest'
+            example:
+              nomePaciente: PACIENTE TESTE
+              dtNascimento: '1990-01-01'
+              sexo: M
+              usuario: NEOH
+              docPacienteCPF: '12345678900'
+      responses:
+        '200':
+          description: Paciente criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codPaciente:
+                    type: integer
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /cadastro-completo:
+    post:
+      tags:
+      - Neoh→HIS · Paciente & Cadastro
+      operationId: cadastroCompleto
+      summary: Cria paciente completo (+)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroCompletoRequest'
+            example:
+              idBUPUnidade: 61
+              NomePaciente: PACIENTE TESTE
+              SexoPaciente: M
+              DataNascimento: '1990-01-01'
+              NomeMae: MAE TESTE
+              CpfPaciente: '12345678900'
+              Email: teste@teste.com
+              Cep: 01000-000
+              Endereco: RUA TESTE
+              Numero: 100
+              Bairro: CENTRO
+              Cidade: SAO PAULO
+              Uf: SP
+      responses:
+        '200':
+          description: Paciente criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codPaciente:
+                    type: integer
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /agenda-disponivel:
+    get:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: agendaDisponivel
+      summary: IDs de agenda disponíveis para uma sala/data
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: idSala
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Id da sala.
+      - name: dataCirurgia
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Data da cirurgia (yyyy-MM-dd HH:mm:ss).
+      responses:
+        '200':
+          description: Array de agendas disponíveis (1..N).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    NR_SEQUENCIA:
+                      type: integer
+                      description: Id da agenda.
+              example:
+              - NR_SEQUENCIA: 12345
+              - NR_SEQUENCIA: 54321
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+      description: 'Retorna os identificadores de agenda (`NR_SEQUENCIA`) disponíveis para uma sala em uma data. Origem no código: `Barramento.cs › ObterIdAgendaDisponivelAsync`, `AgendaBarramentoDto`.'
+  /gerar-horario-livre:
+    get:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: gerarHorarioLivre
+      summary: Gera vagas livres (fire-and-forget)
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cdEstabelecimento
+        in: query
+        required: true
+        schema:
+          type: integer
+      - name: salas
+        in: query
+        required: true
+        schema:
+          type: string
+        description: CSV de códigos de agenda
+      - name: dataInicio
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: dataFim
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: usuario
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Corpo vazio — fire-and-forget, cliente não consome o body
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Sempre `{}`.
+        '400':
+          description: Campo obrigatório ausente, ou dataInicio posterior a dataFim (comparação lexicográfica YYYY-MM-DD)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /agenda-paciente:
+    post:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: atualizarAgendaPaciente
+      summary: Atualiza a cabeça da agenda cirúrgica do paciente
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgendaPacienteRequest'
+            example:
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              dtNascimento: '1972-10-25 00:00:00'
+              ieAnestesia: S
+              ieAutorizacao: PA
+              nmPaciente: PACIENTE TESTE
+              qtIdadePaciente: 50
+              qtIdadeMes: 5
+              telefone: '11941142639'
+              dtPrevistaInternacao: '2026-08-25 05:00:00'
+              cdProcedimento: 195175
+              statusAgenda: M
+              catAtendimento: E
+              idConvenio: 340
+              idPaciente: 1652889
+              ieOrigemProced: O
+              idBupPlano: '21'
+              idMedico: 40095
+              idCategoriaConvenio: 2
+              nrSeqProcInterno: 195175
+      responses:
+        '200':
+          description: Agenda atualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  idAgenda:
+                    type: integer
+                  ieStatusAgenda:
+                    type: string
+                  status:
+                    type: string
+                    example: atualizado
+        '400':
+          description: Campo obrigatório ausente ou corpo esparso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+        '404':
+          description: Agenda não existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /cancelar:
+    post:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: cancelarAgenda
+      summary: Cancela agendamento cirúrgico
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - agendaPaciente
+              - usuario
+              - motivoCancelamento
+              - descrCancelamento
+              properties:
+                agendaPaciente:
+                  type: integer
+                  description: Sequencial da agenda a cancelar
+                usuario:
+                  type: string
+                motivoCancelamento:
+                  type: string
+                  description: Código do motivo (ver /dados-referencia?entidade=motivo-cancelamento)
+                descrCancelamento:
+                  type: string
+                cdPerfil:
+                  type: integer
+                  default: 1848
+                  description: Perfil de sessão
+            example:
+              agendaPaciente: 3688948222
+              usuario: NEOH
+              motivoCancelamento: '1'
+              descrCancelamento: Paciente desistiu
+      responses:
+        '200':
+          description: Cancelado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: integer
+                  mensagem:
+                    type: string
+                  agendaPaciente:
+                    type: integer
+                  numeroCirurgia:
+                    type: string
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /mapa-cirurgico:
+    get:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: mapaCirurgico
+      summary: Mapa de horários e equipamentos de um bloco
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cdEstabelecimento
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Código do estabelecimento.
+      - name: idBloco
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Id do bloco.
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Data de referência (yyyy-MM-dd HH:mm:ss).
+      - name: diaSemana
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Dia da semana.
+      - name: usuario
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Login do usuário.
+      - name: codigosEquipamento
+        in: query
+        required: false
+        schema:
+          type: string
+        description: CSV de códigos de equipamento. Se presente, popula as listas de equipamento.
+      responses:
+        '200':
+          description: Mapa cirúrgico (objeto composto).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  HorariosLivres:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapaHorarioLivre'
+                  HorariosOcupados:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapaHorarioOcupado'
+                  HorarioEquipamentosOcupados:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapaEquipamentoOcupado'
+                  EquipamentosDisponiveis:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MapaEquipamentoDisponivel'
+              example:
+                HorariosLivres:
+                - id: 1
+                  idSala: 1
+                  nmSala: Sala CC 01
+                  dataInicio: '2023-06-30 08:00:00'
+                  dataFim: '2023-06-30 08:30:00'
+                  status: L
+                HorariosOcupados:
+                - id: 1
+                  cdAviso: 123456
+                  idSala: 1
+                  nmSala: Sala CC 01
+                  dataInicio: '2023-06-30 09:30:00'
+                  dataFim: '2023-06-30 10:30:00'
+                  duracao: '2023-06-30 01:00:00'
+                  tempoLimpeza: '2023-06-30 00:10:00'
+                  status: O
+                  dsCirurgia: Artrodese de coluna
+                  idMedico: 65422
+                  nmMedico: Médico fulano de tal
+                HorarioEquipamentosOcupados:
+                - IDEQUIPAMENTO: 150
+                  CdMultiEmpresa: 1
+                  DATAINICIO: '2023-06-30 13:00:00'
+                  DATAFIM: '2023-06-30 15:00:00'
+                  IDSALA: 1
+                  QTDUTILIZADA: 1
+                EquipamentosDisponiveis:
+                - ID_EQUIPAMENTO: 150
+                  CdMultiEmpresa: 1
+                  QT_DISPONIVEL: 4
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+      description: 'Mapa de horários (livres/ocupados) e equipamentos de um bloco em uma data. Origem no código: `Barramento.cs › ListarDadosMapaCirurgicoAsync` e DTOs relacionados (`MapaCirurgicoBarramentoDto`, `HorarioLivreBarramentoDto`, `HorarioOcupadoBarramentoDto`, `HorarioEquipamentoOcupadoBarramentoDto`, `EquipamentoDisponivelBarramentoDto`).'
+  /dados-referencia:
+    get:
+      tags:
+      - Neoh→HIS · Dados de Referência
+      operationId: dadosReferencia
+      summary: Tabelas de referência (19 entidades)
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: entidade
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - bloco
+          - conselho
+          - equipamento
+          - fornecedor
+          - motivo-cancelamento
+          - motivo-transferencia
+          - opme
+          - procedimento
+          - sala
+          - tipo-uti
+          - sangue
+          - caixa
+          - especialidade
+          - convenio
+          - plano
+          - categoria
+          - cobertura
+          - medico
+          - anestesista
+        description: Entidade de lookup
+      - name: cdEstabelecimento
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Obrigatório para bloco/equipamento/motivo-cancelamento/motivo-transferencia/opme/sala/tipo-uti/caixa/convenio/medico; ignorado nas demais.
+      - name: idConvenio
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Opcional em plano/categoria; OBRIGATÓRIO em cobertura.
+      - name: tipoAgenda
+        in: query
+        required: false
+        schema:
+          type: string
+          default: T
+        description: Só motivo-cancelamento
+      - name: situacao
+        in: query
+        required: false
+        schema:
+          type: string
+          default: A
+        description: Só motivo-cancelamento
+      responses:
+        '200':
+          description: Array puro (14 entidades) OU envelope de objeto (5 entidades). O formato depende de `entidade` — ver tabela na descrição.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Bloco'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Conselho'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Equipamento'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Fornecedor'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_MotivoCancelamento'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_MotivoTransferencia'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Procedimento'
+                - $ref: '#/components/schemas/DR_Opme'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_TipoUti'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Sala'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Sangue'
+                - $ref: '#/components/schemas/DR_Caixa'
+                - $ref: '#/components/schemas/DR_Especialidade'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Convenio'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Plano'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Categoria'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DR_Cobertura'
+                - $ref: '#/components/schemas/DR_Medico'
+                - $ref: '#/components/schemas/DR_Anestesista'
+              examples:
+                bloco_array_puro:
+                  summary: entidade=bloco (array puro)
+                  value:
+                  - ID_BLOCO: 1
+                    DS_BLOCO: Bloco A
+                opme_envelope_Dados:
+                  summary: entidade=opme (envelope Dados)
+                  value:
+                    Dados:
+                    - CD_PRODUTO: 123
+                      DS_PRODUTO: Prótese X
+                      CD_PRO_FAT: '123'
+                      CD_TUSS: 789
+                      CD_SUS: '123'
+                especialidade_envelope:
+                  summary: entidade=especialidade (envelope Especialidades)
+                  value:
+                    Especialidades:
+                    - idBupEspecialidade: 10
+                      nomeEspecialidade: Ortopedia
+                anestesista_envelope:
+                  summary: entidade=anestesista (envelope Profissionais)
+                  value:
+                    Profissionais:
+                    - IdMedico: 1
+                      Cpf: '12345678901'
+                      Nome: Dr. Fulano
+                      CustomId: 1
+                      Email: a@a.com
+                      Numero: '999999999'
+        '400':
+          description: 'Campo obrigatório ausente (ex.: idConvenio em cobertura)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+      description: "Endpoint único que retorna 19 entidades de lookup, selecionadas por `entidade`. **14 entidades retornam array puro**; **5 retornam envelope de objeto** — `opme`→`{Dados:[…]}`, `medico`→`{Dados:[…]}`, `caixa`→`{results:[…]}`, `especialidade`→`{Especialidades:[…]}`, `anestesista`→`{Profissionais:[…]}`.\n\n**Filtros por entidade (contrato funcional):**\n\n| Entidade | Filtros | Envelope |\n|---|---|---|\n| bloco | idBupUnidade, classifSetor(O), situacao, tipoAgenda | array |\n| conselho | idBupUnidade, sgConselho, situacao | array |\n| equipamento | idBupUnidade, situacao, tipoEquip | array |\n| fornecedor | idBupUnidade, situacao, fornecedorOPME | array |\n| motivo-cancelamento | idBupUnidade, tipoAgenda, situacao | array |\n| motivo-transferencia | idBupUnidade, motivo, situacao, cirurgia | array |\n| procedimento | idBupUnidade, situacao, tipoProcedimento | array |\n| opme | idBupUnidade | Dados |\n| sala | idBupUnidade, situacao, tipoAgenda | array |\n| tipo-uti | idBupUnidade, cdClassificacao, situacao | array |\n| sangue | idBupUnidade, situacao, tipo, tipoServico | array |\n| caixa | idBupUnidade, situacao, cdEstabelecimento | results |\n| especialidade | idBupUnidade, situacao, cdEstabelecimento | Especialidades |\n| convenio | situacao, cdMultiEmpresa | array |\n| plano | idBupUnidade, situacao, cdMultiEmpresa | array |\n| categoria | cdMultiEmpresa | array |\n| cobertura | idBupUnidade | array |\n| medico | (auth) | Dados |\n| anestesista | idBupUnidade, situacao | Profissionais |\n\nObs.: no código atual (`Barramento.cs`, região \"Carga de dados\"), a maioria dos filtros acima é aplicada pela **URL configurada por hospital**, não montada em C#; o C# substitui `@cdEstabelecimento`/`@cdMultiEmpresa` e resolve token/URL por hospital."
+  /integrar-pedido/cirurgia-agenda:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaAgenda
+      summary: Atualiza a linha principal do pedido cirúrgico
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CirurgiaAgendaRequest'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              dtNascimento: '1972-10-25 00:00:00'
+              ieAnestesia: S
+              ieAutorizacao: PA
+              nmPaciente: PACIENTE TESTE
+              telefone: '11941142639'
+              dtPrevistaInternacao: '2026-08-25 05:00:00'
+              cdProcedimento: 195175
+              catAtendimento: E
+              idConvenio: 340
+              idPaciente: 1652889
+              ieOrigemProced: O
+              idBupPlano: '21'
+              idMedico: 40095
+              idCategoriaConvenio: 2
+              nrSeqProcInterno: 195175
+      responses:
+        '200':
+          description: Atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  idAgenda:
+                    type: integer
+                  status:
+                    type: string
+                    example: atualizado
+        '404':
+          description: Agenda não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+        '500':
+          description: Falha na cascata pós-gravação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/agenda-cirurgica:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoAgendaCirurgica
+      summary: Gera a vaga da agenda cirúrgica
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              properties:
+                idBupUnidade:
+                  type: integer
+                idAgenda:
+                  type: integer
+                login:
+                  type: string
+                  default: NEOH
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-equipamento:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaEquipamento
+      summary: Itens de equipamento (insumos)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - equipamento
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                equipamento:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EquipamentoItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              equipamento:
+              - action: new
+                idEquipamento: 12
+                ieObrigatorio: S
+                ieOrigemInf: M
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - delete
+                        idEquipamento:
+                          type: integer
+                        nrSeqEquipamento:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: Só delete
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-exame:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaExame
+      summary: Itens de exame pré-cirúrgico
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - exame
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                exame:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ExameItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              exame:
+              - action: new
+                idExameServico: 55
+                dsObservacao: pré-op
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - delete
+                        idExame:
+                          type: integer
+                        nrSeqExame:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: Só delete
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-material:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaMaterial
+      summary: Itens de material (insumos)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - material
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                material:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MaterialItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              material:
+              - action: new
+                idMaterial: 4521
+                Quantidade: 2
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - update
+                          - delete
+                        idMaterial:
+                          type: integer
+                        nrSeqMaterial:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-opme:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaOpme
+      summary: Itens de OPME (insumos)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - opme
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                opme:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OpmeItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              opme:
+              - action: new
+                dsProduto: PROTESE X
+                cdProduto: 991
+                Quantidade: 1
+                ieSituacao: A
+                tipoItem: '1'
+                IdFornecedor: 10
+                DsFornecedor: FORNECEDOR X
+                nrSeqAutorizacao: 100
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - update
+                          - delete
+                        DsProduto:
+                          type: string
+                        nrSeqOPME:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-medicamento:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaMedicamento
+      summary: Itens de medicamento (insumos)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - medicamento
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                medicamento:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MedicamentoItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              medicamento:
+              - action: new
+                dsProduto: DIPIRONA
+                Quantidade: 1
+                ieSituacao: A
+                tipoItem: '1'
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - update
+                          - delete
+                        DsProduto:
+                          type: string
+                        nrSeqMed:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-procedimento:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaProcedimento
+      summary: Itens de procedimento do pedido
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - procedimento
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                procedimento:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProcedimentoItem'
+                idBupConvenio:
+                  type: integer
+                  description: Alias idConvenio; usado em Execute, não validado
+                idCategoriaConvenio:
+                  type: integer
+                  description: Alias IdCategoriaConvenio; usado em Execute, não validado
+                idBupPlano:
+                  type: string
+                  description: Só new
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              idBupConvenio: 340
+              idBupPlano: '21'
+              procedimento:
+              - action: new
+                CdCirurgia: 1
+                QtdProcedimento: 1
+                IeLado: U
+                idBupProfissional: 40095
+                CodProcedimentoTabInterno: 195175
+                OrigemProcedimentoTabInterno: '22'
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - update
+                          - delete
+                        CdCirurgia:
+                          type: integer
+                        nr_Seq_Agenda:
+                          type: integer
+                          description: Só new, literal
+                        status:
+                          type: integer
+                          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-sangue:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaSangue
+      summary: Itens de sangue/hemoderivados
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - sangue
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                sangue:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SangueItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              sangue:
+              - action: new
+                IdSangue: 3
+                TipagemSanguinea: O+
+                Quantidade: 2
+      responses:
+        '200':
+          description: '`{message:[...]}` — array de resultados por item.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                          enum:
+                          - new
+                          - update
+                          - delete
+                        idSangue:
+                          type: integer
+                        nr_Sequencia:
+                          type: integer
+                          description: Só new
+                        status:
+                          type: integer
+                          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/cirurgia-caixas:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoCirurgiaCaixas
+      summary: Itens de caixa cirúrgica
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - caixas
+              properties:
+                idBupUnidade:
+                  type: integer
+                  description: Código da unidade (alias cdEstabelecimento)
+                idAgenda:
+                  type: integer
+                  description: Sequencial da agenda (alias nrSequencia)
+                loginUsuario:
+                  type: string
+                  description: Login (alias login)
+                caixas:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CaixaItem'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              caixas:
+              - action: new
+                IdCaixa: 7
+                Quantidade: 1
+      responses:
+        '200':
+          description: Array puro de resultados por item (sem wrapper `message`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    action:
+                      type: string
+                      enum:
+                      - new
+                      - update
+                      - delete
+                    idCaixa:
+                      type: integer
+                    nrSeqCaixa:
+                      type: integer
+                      description: Só new
+                    status:
+                      type: integer
+                      description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/reserva-leito:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoReservaLeito
+      summary: Reserva de leito do pedido
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - dataInternacao
+              - leito
+              - diasInternacao
+              - idBupProfissional
+              properties:
+                idBupUnidade:
+                  type: integer
+                idAgenda:
+                  type: integer
+                loginUsuario:
+                  type: string
+                dataInternacao:
+                  type: string
+                  format: date
+                leito:
+                  type: string
+                diasInternacao:
+                  type: integer
+                idBupProfissional:
+                  type: integer
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              dataInternacao: '2026-08-25'
+              leito: 302A
+              diasInternacao: 2
+              idBupProfissional: 40095
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: reservado
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/autorizacao-convenio:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoAutorizacaoConvenio
+      summary: Guias de autorização de convênio
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutorizacaoConvenioRequest'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              cdCirurgia: 1
+              idBupConvenio: 340
+              idPaciente: 1652889
+              login: NEOH
+              nrSeqEstagio: 46
+              idCategoriaConvenio: 2
+              idBupProfissional: 40095
+              guias:
+              - action: new
+                nrAtendimento: 37583723
+                OrigemProcedimentoTabInterno: '22'
+                ieTipoGuia: '1'
+                ieCaraterIntTiss: '1'
+                ieTipoDia: '1'
+                cdSetorOrigem: 1
+                ieTipoAutorizacao: '1'
+                classificacaoAutorizacao: '1'
+                observacao: guia inicial
+                cdProcedimentoTabInterno: 195175
+                historico: criação
+      responses:
+        '200':
+          description: Array (um objeto por item)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    ieTipoGuia:
+                      type: string
+                    ieCaraterIntTiss:
+                      type: string
+                    ieTipoDia:
+                      type: string
+                    cdSetorOrigem:
+                      type: integer
+                    ieTipoAutorizacao:
+                      type: string
+                    classificacaoAutorizacao:
+                      type: string
+                    observacao:
+                      type: string
+                    nrSeqAutor:
+                      type: integer
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/procedimento-autorizado:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoProcedimentoAutorizado
+      summary: Procedimentos autorizados (itens da guia)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcedimentoAutorizadoRequest'
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              nrSequenciaAutorizacao: 100
+              login: NEOH
+              idBupConvenio: 340
+              idCategoriaConvenio: 2
+              procedimentos:
+              - action: new
+                nrSeqAutor: 100
+                cdCirurgia: 1
+                cdProcedimentoTabInterno: 195175
+                OrigemProcedimentoTabInterno: '22'
+                observacao: aut inicial
+                qtdSolicitada: 1
+                qtdAutorizada: 1
+      responses:
+        '200':
+          description: Array — cada item {nrSeqAutorizacao, cdCirurgia, :200}
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    nrSeqAutorizacao:
+                      type: integer
+                    cdCirurgia:
+                      type: integer
+                    status_code:
+                      type: integer
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/agenda-historico:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoAgendaHistorico
+      summary: Registra histórico da agenda
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - dataHistorico
+              - historico
+              properties:
+                idBupUnidade:
+                  type: integer
+                idAgenda:
+                  type: integer
+                loginUsuario:
+                  type: string
+                usuario:
+                  type: string
+                  description: Usado em Execute, não validado
+                dataHistorico:
+                  type: string
+                  format: date-time
+                historico:
+                  type: string
+                tipoSequencia:
+                  type: string
+                  description: Usado em Execute, não validado
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              usuario: NEOH
+              dataHistorico: '2026-08-20 09:00:00'
+              historico: Pedido criado
+              tipoSequencia: '1'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: registrado
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-pedido/vaga-cirurgica:
+    post:
+      tags:
+      - Neoh→HIS · Integrar Pedido
+      operationId: integrarPedidoVagaCirurgica
+      summary: Gera vaga por tipo
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idBupUnidade
+              - idAgenda
+              - loginUsuario
+              - tipoVaga
+              properties:
+                idBupUnidade:
+                  type: integer
+                idAgenda:
+                  type: integer
+                loginUsuario:
+                  type: string
+                usuario:
+                  type: string
+                  default: NEOH
+                tipoVaga:
+                  type: string
+            example:
+              idBupUnidade: 61
+              idAgenda: 3688948222
+              loginUsuario: NEOH
+              tipoVaga: '1'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: gerado
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /cirurgia-checkpoint:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: cirurgiaCheckpoint
+      summary: Insere avaliação/checkpoint da cirurgia
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - loginUsuario
+              - idPaciente
+              - idBupProfissional
+              - dataAvaliacao
+              - dataAtualizacao
+              - dataLiberacao
+              - tipoAvaliacao
+              - avaliacaoParcial
+              - situacao
+              - idAgenda
+              - restricaoVisualizacao
+              - idBUPUnidade
+              - acao
+              properties:
+                loginUsuario:
+                  type: string
+                idPaciente:
+                  type: integer
+                idBupProfissional:
+                  type: integer
+                dataAvaliacao:
+                  type: string
+                  format: date-time
+                  description: YYYY-MM-DD[ HH:MI:SS]
+                dataAtualizacao:
+                  type: string
+                  format: date-time
+                  description: YYYY-MM-DD[ HH:MI:SS]
+                dataLiberacao:
+                  type: string
+                  format: date-time
+                  description: YYYY-MM-DD[ HH:MI:SS]
+                tipoAvaliacao:
+                  type: string
+                avaliacaoParcial:
+                  type: string
+                situacao:
+                  type: string
+                idAgenda:
+                  type: integer
+                restricaoVisualizacao:
+                  type: string
+                idBUPUnidade:
+                  type: integer
+                acao:
+                  type: string
+            example:
+              loginUsuario: NEOH
+              idPaciente: 1652889
+              idBupProfissional: 40095
+              dataAvaliacao: '2026-08-20 09:00:00'
+              dataAtualizacao: '2026-08-20 09:00:00'
+              dataLiberacao: '2026-08-20 09:00:00'
+              tipoAvaliacao: '1'
+              avaliacaoParcial: N
+              situacao: A
+              idAgenda: 3688948222
+              restricaoVisualizacao: N
+              idBUPUnidade: 61
+              acao: I
+      responses:
+        '200':
+          description: Inserido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nrSequencia:
+                    type: integer
+        '400':
+          description: Campo obrigatório ausente ou data com formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /verificar-disponibilidade:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: verificarDisponibilidade
+      summary: Verifica slot livre de sala em data/hora
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - sala
+              - dtHoraCirurgia
+              - cdEstabelecimento
+              properties:
+                sala:
+                  type: integer
+                  description: ID da sala (AP.)
+                dtHoraCirurgia:
+                  type: string
+                  format: date-time
+                  description: Yyyy-MM-dd HH:mm:ss
+                cdEstabelecimento:
+                  type: integer
+                  description: Alias idBupUnidade
+                statusAgenda:
+                  type: string
+                  default: L
+            example:
+              sala: 101
+              dtHoraCirurgia: '2026-08-25 08:00:00'
+              cdEstabelecimento: 61
+      responses:
+        '200':
+          description: Slot (ou null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  NR_SEQUENCIA:
+                    type: integer
+                    nullable: true
+                    description: Null é resposta negativa válida, não erro
+        '400':
+          description: Data malformada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+        '500':
+          description: Erro real de banco
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /dados-opme:
+    get:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: dadosOpme
+      summary: Lista OPMEs lançados numa agenda
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: agenda
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: ''
+      responses:
+        '200':
+          description: Array de OPMEs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    sequencia:
+                      type: integer
+                    avisoCirurgia:
+                      type: string
+                    materialTasy:
+                      type: string
+                    quantidade:
+                      type: integer
+                    observacao:
+                      type: string
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /status-autorizacao:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: statusAutorizacao
+      summary: Atualiza estágio/fase de uma autorização + histórico
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idAgenda
+              - idBupConvenio
+              - idBupPlano
+              - idBupUnidade
+              - login
+              - nrSeqEstagio
+              properties:
+                idAgenda:
+                  type: integer
+                idBupConvenio:
+                  type: integer
+                  description: Chave junto com idAgenda
+                idBupPlano:
+                  type: string
+                  description: ''
+                idBupUnidade:
+                  type: integer
+                  description: ''
+                login:
+                  type: string
+                nrSeqEstagio:
+                  type: integer
+            example:
+              idAgenda: 3688948222
+              idBupConvenio: 340
+              idBupPlano: '21'
+              idBupUnidade: 61
+              login: NEOH
+              nrSeqEstagio: 46
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+        '400':
+          description: Campo obrigatório ausente ou '0 rows updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /troca-fase:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: trocaFase
+      summary: Troca fase da autorização e/ou status da agenda
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - nrSeqEstagio
+              - avisoCirurgia
+              - agendaStatus
+              - agenda
+              properties:
+                nrSeqEstagio:
+                  type: integer
+                  description: ''
+                avisoCirurgia:
+                  type: integer
+                  description: ''
+                agendaStatus:
+                  type: string
+                  description: Novo valor de
+                agenda:
+                  type: integer
+                  description: ''
+                autorizacaoStatus:
+                  type: string
+                  description: Novo valor de
+            example:
+              nrSeqEstagio: 46
+              avisoCirurgia: 3688948222
+              agendaStatus: C
+              agenda: 3688948222
+              autorizacaoStatus: '46'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saida:
+                    type: boolean
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-anexo:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: integrarAnexo
+      summary: Insere ou remove (soft-delete) anexo da agenda
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - login
+              - idAgenda
+              - action
+              properties:
+                login:
+                  type: string
+                idAgenda:
+                  type: integer
+                action:
+                  type: string
+                  enum:
+                  - insert
+                  - new
+                  - delete
+                filePath:
+                  type: string
+                  description: ''
+                observacao:
+                  type: string
+                  description: ''
+                tipoAnexo:
+                  type: string
+                  description: ''
+                nrSequenciaAgenda:
+                  type: integer
+                  description: Obrigatório se delete — sequencial do anexo a remover
+                idBUPUnidade:
+                  type: integer
+                  description: Aceito, não bindado
+            example:
+              login: NEOH
+              idAgenda: 3688948222
+              action: insert
+              filePath: /anexos/exame.pdf
+              observacao: Exame pré-operatório
+              tipoAnexo: '1'
+      responses:
+        '200':
+          description: Delete → {status}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  nrSequenciaAgenda:
+                    type: integer
+                    description: ''
+                  nrSequenciaAutorizacao:
+                    type: string
+                    description: ''
+        '400':
+          description: Campo obrigatório ausente (conforme action)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /busca-agenda:
+    post:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: buscaAgenda
+      summary: Busca agenda por unidade/sequência/status (legada)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idBupUnidade:
+                  type: integer
+                nrSequencia:
+                  type: integer
+                statusAgenda:
+                  type: string
+            example:
+              idBupUnidade: 61
+              nrSequencia: 3688948222
+              statusAgenda: M
+      responses:
+        '200':
+          description: Agenda encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  NrSeqAgenda:
+                    type: integer
+                  NrReserva:
+                    type: integer
+                  NmSiglaEstab:
+                    type: string
+  /api/GuiaAutorizacao/AtualizarGuiasAutorizacaoEmLote:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarGuiasAutorizacaoEmLote
+      summary: Atualizar guias de autorização em lote (v2)
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/GuiaAutorizacaoLoteItem'
+            example:
+            - CdAvisoCirurgia: 9999
+              LoginHis: daniel.koga
+              QtdDiariasSolicitadas: 1
+              QtdDiariasAutorizadas: 1
+              Guias:
+              - TipoGuia: 0
+                NrGuia: '123456'
+                Senha: '654321'
+                Status: 3
+                DataSolicitacao: '2023-07-10'
+                DataAutorizacao: '2023-07-12'
+                DataValidade: '2023-09-12'
+              Procedimentos:
+              - CdCirurgia: 393
+                CustomIdGuia: 0
+                QtdAutorizada: 1
+                QtdSolicitada: 1
+              Opmes: []
+      responses:
+        '200':
+          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuiaAutorizacaoLoteResultItem'
+              example:
+              - CdAvisoCirurgia: 9999
+                LoginHis: daniel.koga
+                QtdDiariasSolicitadas: 1
+                QtdDiariasAutorizadas: 1
+                HasError: false
+                ErrorMessage:
+                Guias:
+                - TipoGuia: 0
+                  NrGuia: '123456'
+                  Senha: '654321'
+                  Status: 3
+                  DataSolicitacao: '2023-07-10T00:00:00'
+                  DataAutorizacao: '2023-07-12T00:00:00'
+                  DataValidade: '2023-09-12T00:00:00'
+                Procedimentos:
+                - CdCirurgia: 393
+                  CustomIdGuia: 0
+                  QtdAutorizada: 1
+                  QtdSolicitada: 1
+                Opmes: []
+              - CdAvisoCirurgia: 123456
+                LoginHis: daniel.koga
+                QtdDiariasSolicitadas: 1
+                QtdDiariasAutorizadas: 1
+                HasError: true
+                ErrorMessage: Dados do pedido não encontrado
+                Guias: []
+                Procedimentos: []
+                Opmes: []
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/WorkflowCirurgico/AtualizarFase:
+    put:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarFase
+      summary: Atualização de fase (workflow) — individual
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtualizarFaseRequest'
+            example:
+              CdAvisoCirurgia: 999999
+              LoginHis: daniel.koga
+              IdFase: A
+              DataAtualizacao: '2023-06-29 10:25:00'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha (motivo em Message)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: <motivo do erro>
+  /api/WorkflowCirurgico/AtualizarProcessosEmLote:
+    put:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarProcessosEmLote
+      summary: Atualização de fase (workflow) — lote
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AtualizarFaseRequest'
+            example:
+            - CdAvisoCirurgia: 7151816207
+              LoginHis: daniel.koga
+              IdFase: A
+              DataAtualizacao: '2023-11-24 10:25:00'
+            - CdAvisoCirurgia: 123456
+              LoginHis: daniel.koga
+              IdFase: A
+              DataAtualizacao: '2023-11-24 10:25:00'
+      responses:
+        '200':
+          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AtualizarFaseResultItem'
+              example:
+              - CdAvisoCirurgia: 7151816207
+                LoginHis: daniel.koga
+                IdFase: A
+                DataAtualizacao: '2023-11-24T10:25:00'
+                HasError: false
+                ErrorMessage:
+              - CdAvisoCirurgia: 123456
+                LoginHis: daniel.koga
+                IdFase: A
+                DataAtualizacao: '2023-11-24T10:25:00'
+                HasError: true
+                ErrorMessage: Dados do pedido não encontrado
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/CancelamentoCirurgico/RealizarCancelamento:
+    put:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: realizarCancelamento
+      summary: Cancelamento de cirurgia
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelamentoRequest'
+            example:
+              CdAvisoCirurgia: 95697
+              LoginHis: '20548'
+              IdHospital: 10892164000124
+              CdCancelamento: 41
+              DsCancelamento: Teste via cancelamento pelo HIS
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha (motivo em Message)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: <motivo do erro>
+  /api/RealizacaoCirurgia/RealizarCirurgia:
+    put:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: realizarCirurgia
+      summary: Executar cirurgia (atualização de status) — individual
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RealizacaoCirurgiaRequest'
+            example:
+              CdAvisoCirurgia: 999999
+              LoginHis: daniel.koga
+              DataInicioCirurgia: '2023-07-10 10:25:00'
+              DataFimCirurgia: '2023-07-10 11:45:00'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha (motivo em Message)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: <motivo do erro>
+  /api/RealizacaoCirurgia/RealizarCirurgiaEmLote:
+    put:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: realizarCirurgiaEmLote
+      summary: Executar cirurgia (atualização de status) — lote
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RealizacaoCirurgiaRequest'
+            example:
+            - CdAvisoCirurgia: 7151808324
+              LoginHis: daniel.koga
+              DataInicioCirurgia: '2023-11-10 18:05:00'
+              DataFimCirurgia: '2023-11-10 19:15:00'
+            - CdAvisoCirurgia: 123456
+              LoginHis: daniel.koga
+              DataInicioCirurgia: '2023-11-24 08:10:00'
+              DataFimCirurgia: '2023-11-24 08:57:00'
+      responses:
+        '200':
+          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RealizacaoCirurgiaResultItem'
+              example:
+              - CdAvisoCirurgia: 7151808324
+                LoginHis: daniel.koga
+                DataInicioCirurgia: '2023-11-10T18:05:00'
+                DataFimCirurgia: '2023-11-10T19:15:00'
+                HasError: false
+                ErrorMessage:
+              - CdAvisoCirurgia: 123456
+                LoginHis: daniel.koga
+                DataInicioCirurgia: '2023-11-24T08:10:00'
+                DataFimCirurgia: '2023-11-24T08:57:00'
+                HasError: true
+                ErrorMessage: Dados do pedido não encontrado
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/HistoricoCirurgico/InserirHistorico:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: inserirHistorico
+      summary: Histórico de agenda — individual
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoricoAgendaRequest'
+            example:
+              CdAvisoCirurgia: 999999
+              LoginHis: daniel.koga
+              DsHistorico: Novo teste de histórico via API de integração
+              DataHistorico: '2023-07-04 08:35:00'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha (motivo em Message)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: <motivo do erro>
+  /api/HistoricoCirurgico/InserirHistoricoEmLote:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: inserirHistoricoEmLote
+      summary: Histórico de agenda — lote
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/HistoricoAgendaRequest'
+            example:
+            - CdAvisoCirurgia: 7151816207
+              LoginHis: daniel.koga
+              DsHistorico: Testando via fluxo HIS -> Neoh por lote msg 1
+              DataHistorico: '2023-11-24 08:27:00'
+      responses:
+        '200':
+          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricoAgendaResultItem'
+              example:
+              - CdAvisoCirurgia: 7151816207
+                LoginHis: daniel.koga
+                DataHistorico: '2023-11-24T08:27:00'
+                DsHistorico: Testando via fluxo HIS -> Neoh por lote msg 1
+                HasError: false
+                ErrorMessage:
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/HistoricoCirurgico/InserirHistoricoAutorizacaoEmLote:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: inserirHistoricoAutorizacaoEmLote
+      summary: Histórico de autorização — lote
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/HistoricoAutorizacaoLoteItem'
+            example:
+            - CdAutorizacao: 35498217
+              LoginHis: daniel.koga
+              DsHistorico: Testando via fluxo HIS na autorização -> Neoh por lote msg 1
+              DataHistorico: '2024-04-15 08:27:00'
+      responses:
+        '200':
+          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricoAutorizacaoLoteResultItem'
+              example:
+              - CdAutorizacao: 35498217
+                CdAvisoCirurgia: 7427022771
+                LoginHis: daniel.koga
+                DataHistorico: '2024-04-15T08:27:00'
+                DsHistorico: Testando via fluxo HIS na autorização -> Neoh por lote msg 1
+                HasError: false
+                ErrorMessage:
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/v1/procedimentos/grade-opme:
+    get:
+      tags:
+      - Neoh→HIS · Portal do Médico & Painel (novas APIs)
+      operationId: gradeOpme
+      summary: Grade de OPME de um procedimento
+      description: Retorna a grade de OPME (fornecedores padronizados + itens) de um procedimento, para o Portal do Médico. Consumo em tempo real. Resultados são sugestões editáveis.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: codigoProcedimento
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Código do procedimento.
+      - name: codigoConvenio
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Informar caso a grade varie por convênio.
+      responses:
+        '200':
+          description: 'Grade de OPME (200 OK; sem grade: itens:[]).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradeOpmeResponse'
+        '400':
+          description: Parâmetro inválido (CPF, código ou período).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '401':
+          description: Credencial ausente ou inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '403':
+          description: Sem acesso ao hospital.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '500':
+          description: Erro interno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '503':
+          description: Indisponibilidade/timeout do HIS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+  /api/v1/pedidos/checklist-dispensacao-material:
+    get:
+      tags:
+      - Neoh→HIS · Portal do Médico & Painel (novas APIs)
+      operationId: checklistDispensacaoMaterial
+      summary: Checklist de dispensação de material do pedido
+      description: Retorna o status das 4 etapas (Fornecedor, Recebimento, CME, Sala) da dispensação de material de um pedido, para o Painel Cirúrgico. Consumo em tempo real. O frontend define cor/símbolo a partir de `status`.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: nrPedido
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Número sequencial (nrSequencia) do pedido no HIS.
+      responses:
+        '200':
+          description: Checklist (200 OK; sempre as 4 etapas na ordem F, R, C, S).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistMaterialResponse'
+        '400':
+          description: Parâmetro inválido (CPF, código ou período).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '401':
+          description: Credencial ausente ou inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '403':
+          description: Sem acesso ao hospital.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '404':
+          description: 'Recurso não encontrado (ex.: nrPedido inexistente).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '500':
+          description: Erro interno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '503':
+          description: Indisponibilidade/timeout do HIS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+  /api/v1/historico-cirurgico/procedimentos-associados:
+    get:
+      tags:
+      - Neoh→HIS · Portal do Médico & Painel (novas APIs)
+      operationId: procedimentosAssociados
+      summary: Procedimentos associados (histórico)
+      description: Retorna, por médico e procedimento principal, os procedimentos frequentemente associados no período. Consumo periódico. Não retorna dados de pacientes.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: dataInicio
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Início do período (yyyy-MM-dd).
+      - name: dataFim
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Fim do período (yyyy-MM-dd).
+      responses:
+        '200':
+          description: 'Lista de procedimentos associados (200 OK; sem histórico: []).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcedimentosAssociadosResponse'
+        '400':
+          description: Parâmetro inválido (CPF, código ou período).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '401':
+          description: Credencial ausente ou inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '403':
+          description: Sem acesso ao hospital.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '422':
+          description: Período inconsistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '500':
+          description: Erro interno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '503':
+          description: Indisponibilidade/timeout do HIS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+  /api/v1/historico-cirurgico/tempo-medio:
+    get:
+      tags:
+      - Neoh→HIS · Portal do Médico & Painel (novas APIs)
+      operationId: tempoMedioCirurgia
+      summary: Tempo médio de cirurgia (histórico)
+      description: Retorna o tempo médio (em minutos) por médico e procedimento principal no período. Consumo periódico. Considera apenas cirurgias concluídas.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: dataInicio
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Início do período (yyyy-MM-dd).
+      - name: dataFim
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Fim do período (yyyy-MM-dd).
+      responses:
+        '200':
+          description: 'Tempos médios (200 OK; sem histórico: []).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TempoMedioResponse'
+        '400':
+          description: Parâmetro inválido (CPF, código ou período).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '401':
+          description: Credencial ausente ou inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '403':
+          description: Sem acesso ao hospital.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '422':
+          description: Período inconsistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '500':
+          description: Erro interno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '503':
+          description: Indisponibilidade/timeout do HIS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+  /api/v1/historico-cirurgico/diarias-sugeridas:
+    get:
+      tags:
+      - Neoh→HIS · Portal do Médico & Painel (novas APIs)
+      operationId: diariasSugeridas
+      summary: Sugestão de diárias (histórico)
+      description: Retorna a quantidade de diárias sugerida por médico e procedimento principal no período. Consumo periódico. Considera apenas internações concluídas.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: dataInicio
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Início do período (yyyy-MM-dd).
+      - name: dataFim
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Fim do período (yyyy-MM-dd).
+      responses:
+        '200':
+          description: 'Diárias sugeridas (200 OK; sem histórico: []).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiariasSugeridasResponse'
+        '400':
+          description: Parâmetro inválido (CPF, código ou período).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '401':
+          description: Credencial ausente ou inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '403':
+          description: Sem acesso ao hospital.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '422':
+          description: Período inconsistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '500':
+          description: Erro interno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+        '503':
+          description: Indisponibilidade/timeout do HIS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNovasApis'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer token do Barramento (sentido Neoh→HIS). Obtido em POST /token.
+    clientId:
+      type: apiKey
+      in: header
+      name: client_id
+      description: Callbacks HIS→Neoh. Fornecido pela Intelectah por ambiente.
+    clientSecret:
+      type: apiKey
+      in: header
+      name: client_secret
+      description: Callbacks HIS→Neoh. Fornecido pela Intelectah por ambiente.
+  schemas:
+    RespostaErroNeoh:
+      type: object
+      description: Envelope de erro padrão do Barramento (WrapError, incondicional).
+      properties:
+        sucesso:
+          type: integer
+          example: 0
+        mensagem:
+          type: string
+    MensagemResposta:
+      type: object
+      description: Resposta padrão dos callbacks HIS→Neoh (sucesso e 400 individual).
+      properties:
+        Message:
+          type: string
+    CadastroSimplificadoRequest:
+      type: object
+      required:
+      - nomePaciente
+      - dtNascimento
+      - sexo
+      - usuario
+      properties:
+        nomePaciente:
+          type: string
+        dtNascimento:
+          type: string
+          format: date
+          description: YYYY-MM-DD
+        sexo:
+          type: string
+          enum:
+          - M
+          - F
+        usuario:
+          type: string
+        docPacienteCPF:
+          type: string
+          description: Chave de dedup
+        docPacienteRNE:
+          type: string
+        docPacientePassport:
+          type: string
+        idBUPUnidade:
+          type: integer
+          description: Aceito, não bindado
+    CadastroCompletoRequest:
+      type: object
+      required:
+      - idBUPUnidade
+      - NomePaciente
+      - SexoPaciente
+      - DataNascimento
+      - NomeMae
+      - CpfPaciente
+      properties:
+        idBUPUnidade:
+          type: integer
+        NomePaciente:
+          type: string
+        SexoPaciente:
+          type: string
+          enum:
+          - M
+          - F
+        DataNascimento:
+          type: string
+          description: YYYY-MM-DD
+        NomeMae:
+          type: string
+          description: Grava tipo-5
+        CpfPaciente:
+          type: string
+          description: Chave de dedup
+        Email:
+          type: string
+        DdiTelefone:
+          type: integer
+        DddTelefone:
+          type: integer
+        Telefone:
+          type: string
+        DdiCelular:
+          type: integer
+        DddCelular:
+          type: integer
+        Celular:
+          type: string
+        Cep:
+          type: string
+        Endereco:
+          type: string
+        Numero:
+          type: integer
+        Complemento:
+          type: string
+        Bairro:
+          type: string
+        Cidade:
+          type: string
+        Uf:
+          type: string
+        Pais:
+          type: string
+          description: Sem lookup de código de país
+    AgendaPacienteRequest:
+      type: object
+      required:
+      - idAgenda
+      - loginUsuario
+      - dtNascimento
+      - ieAnestesia
+      - nmPaciente
+      - qtIdadePaciente
+      - qtIdadeMes
+      - telefone
+      - dtPrevistaInternacao
+      - catAtendimento
+      - idConvenio
+      - idPaciente
+      - idBupPlano
+      properties:
+        idAgenda:
+          type: integer
+          description: Aceita alias nrSequencia
+        loginUsuario:
+          type: string
+          description: Aceita alias login
+        dtNascimento:
+          type: string
+          format: date-time
+        ieAnestesia:
+          type: string
+        ieAutorizacao:
+          type: string
+          description: Opcional; fallback = valor atual da linha
+        nmPaciente:
+          type: string
+        qtIdadePaciente:
+          type: integer
+        qtIdadeMes:
+          type: integer
+        telefone:
+          type: string
+        dtPrevistaInternacao:
+          type: string
+          format: date-time
+        cdProcedimento:
+          type: integer
+          description: Opcional; fallback = valor atual da linha
+        statusAgenda:
+          type: string
+          description: Opcional; fallback = valor atual, senão N
+        catAtendimento:
+          type: string
+          description: Aceita alias caraterAtendimento
+        idConvenio:
+          type: integer
+          description: Aceita alias idBupConvenio
+        idPaciente:
+          type: integer
+        ieOrigemProced:
+          type: string
+          description: Opcional; fallback = valor atual da linha
+        idBupPlano:
+          type: string
+        idMedico:
+          type: integer
+          description: Opcional; fallback = valor atual da linha
+        idCategoriaConvenio:
+          type: integer
+          description: Opcional; fallback = valor atual da linha
+        nrSeqProcInterno:
+          type: integer
+          description: Opcional; fallback = valor atual da linha
+        usuarioOrigem:
+          type: string
+          description: Opcional; fallback = loginUsuario (nome não confirmado)
+        dtAgendamento:
+          type: string
+          format: date-time
+          description: Opcional; fallback = timestamp de save (nome não confirmado)
+    CirurgiaAgendaRequest:
+      type: object
+      required:
+      - idBupUnidade
+      - idAgenda
+      - loginUsuario
+      properties:
+        idBupUnidade:
+          type: integer
+        idAgenda:
+          type: integer
+        loginUsuario:
+          type: string
+          description: Aceita fallback `login`
+        dtNascimento:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+          format: date-time
+        ieAnestesia:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        ieAutorizacao:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        nmPaciente:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        telefone:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        dtPrevistaInternacao:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+          format: date-time
+        cdProcedimento:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        catAtendimento:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        idConvenio:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        idPaciente:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        ieOrigemProced:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        idBupPlano:
+          type: string
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        idMedico:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        idCategoriaConvenio:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        nrSeqProcInterno:
+          type: integer
+          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+        statusAgenda:
+          type: string
+          description: 'Precedência: payload > status atual > N'
+        cdPerfil:
+          type: integer
+          default: 1848
+    EquipamentoItem:
+      type: object
+      required:
+      - action
+      - idEquipamento
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - delete
+        idEquipamento:
+          type: integer
+        ieObrigatorio:
+          type: string
+          description: Só new
+        ieOrigemInf:
+          type: string
+          description: Só new
+    ExameItem:
+      type: object
+      required:
+      - action
+      - idExameServico
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - delete
+        idExameServico:
+          type: integer
+        dsObservacao:
+          type: string
+          description: Só new
+    MaterialItem:
+      type: object
+      required:
+      - action
+      - idMaterial
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        idMaterial:
+          type: integer
+        Quantidade:
+          type: integer
+          description: ''
+    OpmeItem:
+      type: object
+      required:
+      - action
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        nrSequenciaOPME:
+          type: integer
+          description: Chave
+        dsProduto:
+          type: string
+        cdProduto:
+          type: integer
+          description: Só new
+        Quantidade:
+          type: integer
+          description: ''
+        ieSituacao:
+          type: string
+          description: Só new
+        tipoItem:
+          type: string
+          description: Só new
+        IdFornecedor:
+          type: integer
+          description: ''
+        DsFornecedor:
+          type: string
+          description: ''
+        nrSeqAutorizacao:
+          type: integer
+          description: Aceita alias nrSequenciaAutor
+    MedicamentoItem:
+      type: object
+      required:
+      - action
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        nrSequenciaMed:
+          type: integer
+          description: Chave
+        dsProduto:
+          type: string
+        Quantidade:
+          type: integer
+          description: ''
+        ieSituacao:
+          type: string
+          description: Só new
+        tipoItem:
+          type: string
+          description: Só new
+    ProcedimentoItem:
+      type: object
+      required:
+      - action
+      - CdCirurgia
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        CdCirurgia:
+          type: integer
+        QtdProcedimento:
+          type: integer
+          description: ''
+        IeLado:
+          type: string
+          description: ''
+        idBupProfissional:
+          type: integer
+          description: ''
+        CodProcedimentoTabInterno:
+          type: integer
+          description: ''
+        OrigemProcedimentoTabInterno:
+          type: string
+          description: ''
+      description: Casing mixed-case literal do doc-fonte — não normalizar.
+    SangueItem:
+      type: object
+      required:
+      - action
+      - IdSangue
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        IdSangue:
+          type: integer
+        TipagemSanguinea:
+          type: string
+          description: Só new
+        Quantidade:
+          type: integer
+          description: ''
+    CaixaItem:
+      type: object
+      required:
+      - action
+      - IdCaixa
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        IdCaixa:
+          type: integer
+        Quantidade:
+          type: integer
+          description: ''
+    GuiaConvenioItem:
+      type: object
+      required:
+      - action
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+        nrAtendimento:
+          type: integer
+        OrigemProcedimentoTabInterno:
+          type: string
+        ieTipoGuia:
+          type: string
+          description: Só new
+        ieCaraterIntTiss:
+          type: string
+          description: Só new
+        ieTipoDia:
+          type: string
+          description: Só new
+        cdSetorOrigem:
+          type: integer
+          description: Só new
+        ieTipoAutorizacao:
+          type: string
+          description: Só new
+        classificacaoAutorizacao:
+          type: string
+          description: Só new
+        observacao:
+          type: string
+          description: Só new
+        cdProcedimentoTabInterno:
+          type: integer
+        historico:
+          type: string
+    AutorizacaoConvenioRequest:
+      type: object
+      required:
+      - idBupUnidade
+      - idAgenda
+      - loginUsuario
+      - guias
+      properties:
+        idBupUnidade:
+          type: integer
+          description: Alias cdEstabelecimento
+        idAgenda:
+          type: integer
+        loginUsuario:
+          type: string
+        cdCirurgia:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        idBupConvenio:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        idPaciente:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        nrSeqEstagio:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        idCategoriaConvenio:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        idBupProfissional:
+          type: integer
+          description: Usado em Execute, não validado por Validate
+        nrSeqAutorizacao:
+          type: integer
+          description: ''
+        login:
+          type: string
+          description: 'Fallback loginUsuario via ResolveLogin (PR #89)'
+        cdAcomodacao:
+          type: string
+          description: Só new
+        guias:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuiaConvenioItem'
+    ProcedimentoAutorizadoItem:
+      type: object
+      required:
+      - action
+      - nrSeqAutor
+      - cdCirurgia
+      properties:
+        action:
+          type: string
+          enum:
+          - new
+          - update
+          - delete
+        nrSeqAutor:
+          type: integer
+        cdCirurgia:
+          type: integer
+        cdProcedimentoTabInterno:
+          type: integer
+        OrigemProcedimentoTabInterno:
+          type: string
+          description: Só new
+        observacao:
+          type: string
+          description: Só new
+        qtdSolicitada:
+          type: integer
+          description: ''
+        qtdAutorizada:
+          type: integer
+          description: Só new
+    ProcedimentoAutorizadoRequest:
+      type: object
+      required:
+      - idBupUnidade
+      - idAgenda
+      - loginUsuario
+      - procedimentos
+      properties:
+        idBupUnidade:
+          type: integer
+          description: Alias cdEstabelecimento
+        idAgenda:
+          type: integer
+        loginUsuario:
+          type: string
+        nrSequenciaAutorizacao:
+          type: integer
+          description: Usado em Execute, não validado
+        login:
+          type: string
+          description: 'Fallback loginUsuario via ResolveLogin (PR #89)'
+        idBupConvenio:
+          type: integer
+          description: Usado em Execute, não validado
+        idCategoriaConvenio:
+          type: integer
+          description: Alias IdCategoriaConvenio; usado em Execute, não validado
+        procedimentos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcedimentoAutorizadoItem'
+    Especialidade:
+      type: object
+      properties:
+        idBupEspecialidade:
+          type: integer
+        nomeEspecialidade:
+          type: string
+    ProfissionalAnestesista:
+      type: object
+      description: Item de entidade=anestesista (envelope Profissionais).
+      properties:
+        idBupProfissionalSaude:
+          type: integer
+        cpf:
+          type: string
+        nomePessoa:
+          type: string
+        statusAtivo:
+          type: string
+        CRM_UF:
+          type: string
+        CRM_NR:
+          type: string
+        especialidades:
+          type: array
+          items:
+            $ref: '#/components/schemas/Especialidade'
+        telefones:
+          type: array
+          items: {}
+          description: Sempre vazio — não implementado
+        contatosEletronicos:
+          type: array
+          items: {}
+          description: Sempre vazio — não implementado
+        documentos:
+          type: array
+          items: {}
+          description: Sempre vazio — não implementado
+    Guia:
+      type: object
+      required:
+      - TipoGuia
+      - NrGuia
+      - Status
+      properties:
+        TipoGuia:
+          type: integer
+          enum:
+          - 0
+          - 1
+          - 2
+          description: 0 Internação· 1 OPME· 2 Procedimento
+        NrGuia:
+          type: string
+        Senha:
+          type: string
+          description: '''0'' equivale a sem senha'
+        Status:
+          type: integer
+          enum:
+          - 3
+          - 4
+          - 9
+          description: 3 Autorizado· 4 Negado· 9 Autorizado parcial
+        DataSolicitacao:
+          type: string
+          description: Yyyy-MM-dd (resposta em ISO)
+        DataAutorizacao:
+          type: string
+          description: Yyyy-MM-dd (resposta em ISO)
+        DataValidade:
+          type: string
+          description: Yyyy-MM-dd (resposta em ISO)
+    ProcedimentoGuia:
+      type: object
+      required:
+      - CdCirurgia
+      properties:
+        CdCirurgia:
+          type: integer
+        CustomIdGuia:
+          type: integer
+          description: NrSequencia_autor — vincula à guia
+        QtdSolicitada:
+          type: integer
+        QtdAutorizada:
+          type: integer
+    OpmeGuia:
+      type: object
+      required:
+      - CdHisOpme
+      properties:
+        CdHisOpme:
+          type: integer
+        CustomIdGuia:
+          type: integer
+          description: NrSequencia_autor — vincula à guia
+        QtdSolicitada:
+          type: integer
+        QtdAutorizada:
+          type: integer
+        DsFabricante:
+          type: string
+        CdFabricante:
+          type: string
+        DsFornecedor:
+          type: string
+        CdFornecedor:
+          type: string
+    GuiaAutorizacaoLoteItem:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - LoginHis
+      - Guias
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+          description: Código do aviso cirúrgico do pedido no Neoh
+        LoginHis:
+          type: string
+        QtdDiariasSolicitadas:
+          type: integer
+        QtdDiariasAutorizadas:
+          type: integer
+        Guias:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guia'
+        Procedimentos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcedimentoGuia'
+        Opmes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpmeGuia'
+    GuiaAutorizacaoLoteResultItem:
+      allOf:
+      - $ref: '#/components/schemas/GuiaAutorizacaoLoteItem'
+      - type: object
+        properties:
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+      description: Eco do item + HasError/ErrorMessage. Datas retornam em ISO yyyy-MM-ddTHH:mm:ss.
+    AtualizarFaseRequest:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - LoginHis
+      - IdFase
+      - DataAtualizacao
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+        LoginHis:
+          type: string
+        IdFase:
+          type: string
+          description: 'Código da fase de destino (ex.: A) — confirmar lista com a Intelectah'
+        DataAtualizacao:
+          type: string
+          description: Yyyy-MM-dd HH:mm:ss
+    AtualizarFaseResultItem:
+      allOf:
+      - $ref: '#/components/schemas/AtualizarFaseRequest'
+      - type: object
+        properties:
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+    CancelamentoRequest:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - LoginHis
+      - IdHospital
+      - CdCancelamento
+      - DsCancelamento
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+          description: Nº da agenda / aviso cirúrgico no Neoh
+        LoginHis:
+          type: string
+          description: Login do usuário no HIS (HIS)
+        IdHospital:
+          type: integer
+          description: CNPJ do hospital (localiza usuário e pedido)
+        CdCancelamento:
+          type: integer
+          description: Código do motivo de cancelamento
+        DsCancelamento:
+          type: string
+        DataCancelamento:
+          type: string
+          description: Aceito pelo contrato, NÃO utilizado hoje; se enviado, yyyy-MM-dd HH:mm:ss
+    RealizacaoCirurgiaRequest:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - LoginHis
+      - DataInicioCirurgia
+      - DataFimCirurgia
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+        LoginHis:
+          type: string
+        DataInicioCirurgia:
+          type: string
+          description: Yyyy-MM-dd HH:mm:ss; não futura
+        DataFimCirurgia:
+          type: string
+          description: Yyyy-MM-dd HH:mm:ss; não futura; > DataInicioCirurgia
+    RealizacaoCirurgiaResultItem:
+      allOf:
+      - $ref: '#/components/schemas/RealizacaoCirurgiaRequest'
+      - type: object
+        properties:
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+    HistoricoAgendaRequest:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - LoginHis
+      - DsHistorico
+      - DataHistorico
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+        LoginHis:
+          type: string
+        DsHistorico:
+          type: string
+        DataHistorico:
+          type: string
+          description: Yyyy-MM-dd HH:mm:ss
+    HistoricoAgendaResultItem:
+      allOf:
+      - $ref: '#/components/schemas/HistoricoAgendaRequest'
+      - type: object
+        properties:
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+    HistoricoAutorizacaoLoteItem:
+      type: object
+      required:
+      - CdAutorizacao
+      - LoginHis
+      - DsHistorico
+      - DataHistorico
+      properties:
+        CdAutorizacao:
+          type: integer
+          description: Código da autorização à qual o histórico será vinculado
+        LoginHis:
+          type: string
+        DsHistorico:
+          type: string
+        DataHistorico:
+          type: string
+          description: Yyyy-MM-dd HH:mm:ss
+    HistoricoAutorizacaoLoteResultItem:
+      allOf:
+      - $ref: '#/components/schemas/HistoricoAutorizacaoLoteItem'
+      - type: object
+        properties:
+          CdAvisoCirurgia:
+            type: integer
+            description: Resolvido pelo Neoh a partir da autorização; só na resposta
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+    ConsultaPacienteItem:
+      type: object
+      description: Registro de paciente retornado no envelope consultaPaciente[].
+      properties:
+        cdPaciente:
+          type: integer
+          description: Código do paciente no HIS.
+        nomePaciente:
+          type: string
+        sexoPaciente:
+          type: string
+          description: 1=Masculino, 3=Feminino, 7=Não informado (mapeamento do HIS).
+        dataNascimento:
+          type: string
+          description: yyyy-MM-dd.
+        nomeMae:
+          type: string
+        cpfPaciente:
+          type: string
+        email:
+          type: string
+        ddiTelefone:
+          type: integer
+        dddTelefone:
+          type: integer
+        telefone:
+          type: string
+        ddiCelular:
+          type: integer
+        dddCelular:
+          type: integer
+        celular:
+          type: string
+        cep:
+          type: string
+        endereco:
+          type: string
+        numero:
+          type: integer
+        complemento:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        uf:
+          type: string
+        pais:
+          type: string
+        codigoAtendimento:
+          type: integer
+        codigoConvenio:
+          type: integer
+        dsConvenio:
+          type: string
+        codigoPlano:
+          type: integer
+        dsPlano:
+          type: string
+        numeroCarteirinha:
+          type: string
+        numeroCartaoSus:
+          type: string
+        nmMunicipio:
+          type: string
+        dataValidade:
+          type: string
+          description: Validade da carteirinha.
+        descricaoLeito:
+          type: string
+        codigoUnidadeInternacao:
+          type: integer
+        pacienteOncologico:
+          type: string
+          description: S ou N.
+        codCidade:
+          type: string
+        cdPais:
+          type: string
+        dataInternacao:
+          type: string
+        horaInternacao:
+          type: string
+      required:
+      - cdPaciente
+      - nomePaciente
+      - sexoPaciente
+    MapaHorarioLivre:
+      type: object
+      title: Horário livre
+      properties:
+        id:
+          type: integer
+        idSala:
+          type: integer
+        nmSala:
+          type: string
+        dataInicio:
+          type: string
+          description: yyyy-MM-dd HH:mm:ss
+        dataFim:
+          type: string
+          description: yyyy-MM-dd HH:mm:ss
+        status:
+          type: string
+          description: Sempre 'L' (livre).
+      required:
+      - id
+      - idSala
+      - dataInicio
+      - dataFim
+      - status
+    MapaHorarioOcupado:
+      type: object
+      title: Horário ocupado
+      properties:
+        id:
+          type: integer
+        cdAviso:
+          type: integer
+        idSala:
+          type: integer
+        nmSala:
+          type: string
+        dataInicio:
+          type: string
+          description: yyyy-MM-dd HH:mm:ss
+        dataFim:
+          type: string
+          description: yyyy-MM-dd HH:mm:ss
+        duracao:
+          type: string
+        tempoLimpeza:
+          type: string
+        status:
+          type: string
+          description: Sempre 'O' (ocupado).
+        dsCirurgia:
+          type: string
+        idMedico:
+          type: integer
+        nmMedico:
+          type: string
+      required:
+      - id
+      - cdAviso
+      - idSala
+      - dataInicio
+      - dataFim
+      - duracao
+      - tempoLimpeza
+      - status
+      - dsCirurgia
+      - nmMedico
+    MapaEquipamentoOcupado:
+      type: object
+      title: Equipamento ocupado
+      properties:
+        IDEQUIPAMENTO:
+          type: integer
+        CdMultiEmpresa:
+          type: integer
+        DATAINICIO:
+          type: string
+          description: yyyy-MM-dd HH:mm
+        DATAFIM:
+          type: string
+          description: yyyy-MM-dd HH:mm
+        IDSALA:
+          type: integer
+        QTDUTILIZADA:
+          type: integer
+      required:
+      - IDEQUIPAMENTO
+      - DATAINICIO
+      - DATAFIM
+      - IDSALA
+      - QTDUTILIZADA
+    MapaEquipamentoDisponivel:
+      type: object
+      title: Equipamento disponível
+      properties:
+        ID_EQUIPAMENTO:
+          type: integer
+        CdMultiEmpresa:
+          type: integer
+        QT_DISPONIVEL:
+          type: integer
+      required:
+      - ID_EQUIPAMENTO
+      - QT_DISPONIVEL
+    DR_Bloco:
+      type: object
+      title: Bloco
+      properties:
+        ID_BLOCO:
+          type: integer
+        DS_BLOCO:
+          type: string
+      required:
+      - ID_BLOCO
+      - DS_BLOCO
+    DR_Conselho:
+      type: object
+      title: Conselho
+      properties:
+        ID_CONSELHO:
+          type: integer
+        DS_CONSELHO:
+          type: string
+      required:
+      - ID_CONSELHO
+      - DS_CONSELHO
+    DR_Equipamento:
+      type: object
+      title: Equipamento
+      properties:
+        ID_EQUIPAMENTO:
+          type: integer
+        DS_EQUIPAMENTO:
+          type: string
+      required:
+      - ID_EQUIPAMENTO
+      - DS_EQUIPAMENTO
+    DR_Fornecedor:
+      type: object
+      title: Fornecedor
+      properties:
+        ID_FORNECEDOR:
+          type: integer
+        CUSTOM_ID:
+          type: integer
+        RAZAO_SOCIAL:
+          type: string
+        NOME_FANTASIA:
+          type: string
+        DS_EMAIL:
+          type: string
+        CNPJ:
+          type: string
+      required:
+      - ID_FORNECEDOR
+      - CUSTOM_ID
+      - RAZAO_SOCIAL
+      - NOME_FANTASIA
+      - DS_EMAIL
+    DR_MotivoCancelamento:
+      type: object
+      title: Motivo de cancelamento
+      properties:
+        CD_CANCELAMENTO:
+          type: integer
+        DS_CANCELAMENTO:
+          type: string
+      required:
+      - CD_CANCELAMENTO
+      - DS_CANCELAMENTO
+    DR_MotivoTransferencia:
+      type: object
+      title: Motivo de transferência
+      properties:
+        CD_TRANSFERENCIA:
+          type: integer
+        DS_TRANSFERENCIA:
+          type: string
+      required:
+      - CD_TRANSFERENCIA
+      - DS_TRANSFERENCIA
+    DR_Procedimento:
+      type: object
+      title: Procedimento
+      properties:
+        CdCirurgia:
+          type: integer
+        DsCirurgia:
+          type: string
+        NrHorasPadrao:
+          type: string
+          description: HH:mm:ss
+        IdEspecialidade:
+          type: integer
+          description: Id da especialidade (pode vir null).
+        DsOrientacao:
+          type: string
+        CdProFat:
+          type: string
+        CdTuss:
+          type: integer
+        CdSus:
+          type: integer
+        PorteCirurgia:
+          type: string
+          description: P, M, G, E, S
+      required:
+      - CdCirurgia
+      - DsCirurgia
+      - NrHorasPadrao
+      - IdEspecialidade
+      - DsOrientacao
+      - CdProFat
+      - CdTuss
+      - CdSus
+      - PorteCirurgia
+    DR_OpmeItem:
+      type: object
+      title: OPME (item)
+      properties:
+        CD_PRODUTO:
+          type: integer
+        DS_PRODUTO:
+          type: string
+        CD_PRO_FAT:
+          type: string
+        CD_TUSS:
+          type: integer
+          description: 'Código TUSS. Obs.: há bug conhecido no código (GetOpmesAsync mapeia CD_TUSS = CdSus); correção prevista no fonte.'
+        REGISTRO_ANVISA:
+          type: string
+        CD_SUS:
+          type: string
+      required:
+      - CD_PRODUTO
+      - DS_PRODUTO
+      - CD_PRO_FAT
+      - CD_TUSS
+    DR_Opme:
+      type: object
+      title: OPME (envelope Dados)
+      properties:
+        Dados:
+          type: array
+          items:
+            $ref: '#/components/schemas/DR_OpmeItem'
+    DR_TipoUti:
+      type: object
+      title: Setor / Tipo UTI
+      properties:
+        CUSTOM_ID_TIPO_UTI:
+          type: integer
+        DS_TIPO_UTI:
+          type: string
+      required:
+      - CUSTOM_ID_TIPO_UTI
+      - DS_TIPO_UTI
+    DR_Sala:
+      type: object
+      title: Sala
+      properties:
+        ID_BLOCO:
+          type: integer
+        ID_SALA:
+          type: integer
+        DS_SALA:
+          type: string
+        TEMPO_PREPARO:
+          type: string
+          description: HH:mm:ss
+      required:
+      - ID_BLOCO
+      - ID_SALA
+      - DS_SALA
+      - TEMPO_PREPARO
+    DR_Sangue:
+      type: object
+      title: Sangue
+      properties:
+        ID_SANGUE:
+          type: integer
+        DS_SANGUE:
+          type: string
+      required:
+      - ID_SANGUE
+      - DS_SANGUE
+    DR_CaixaItem:
+      type: object
+      title: Caixa (item)
+      properties:
+        ID_CAIXA:
+          type: integer
+        DS_CAIXA:
+          type: string
+      required:
+      - ID_CAIXA
+      - DS_CAIXA
+    DR_Caixa:
+      type: object
+      title: Caixa (envelope results)
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DR_CaixaItem'
+    DR_EspecialidadeItem:
+      type: object
+      title: Especialidade (item)
+      properties:
+        idBupEspecialidade:
+          type: integer
+        nomeEspecialidade:
+          type: string
+      required:
+      - idBupEspecialidade
+      - nomeEspecialidade
+    DR_Especialidade:
+      type: object
+      title: Especialidade (envelope Especialidades)
+      properties:
+        Especialidades:
+          type: array
+          items:
+            $ref: '#/components/schemas/DR_EspecialidadeItem'
+    DR_Convenio:
+      type: object
+      title: Convênio
+      properties:
+        CustomId:
+          type: integer
+        CustomName:
+          type: string
+        IdConvenio:
+          type: integer
+        CdHospitalOperadora:
+          type: integer
+        PrazoComOpme:
+          type: integer
+      required:
+      - CustomId
+      - CustomName
+      - IdConvenio
+      - CdHospitalOperadora
+    DR_Plano:
+      type: object
+      title: Plano
+      properties:
+        IdPlano:
+          type: integer
+        DescPlano:
+          type: string
+        CustomIdConvenio:
+          type: integer
+        BitPermiteInternacao:
+          type: integer
+          description: 1=Sim, 0=Não
+      required:
+      - IdPlano
+      - DescPlano
+      - CustomIdConvenio
+    DR_Categoria:
+      type: object
+      title: Categoria
+      properties:
+        CustomIdConvenio:
+          type: integer
+        CustomIdCategoria:
+          type: integer
+        DsCategoria:
+          type: string
+      required:
+      - CustomIdConvenio
+      - CustomIdCategoria
+      - DsCategoria
+    DR_Cobertura:
+      type: object
+      title: Cobertura
+      properties:
+        CustomIdConvenio:
+          type: integer
+        CustomIdCobertura:
+          type: integer
+        DsCobertura:
+          type: string
+        IdPlano:
+          type: integer
+      required:
+      - CustomIdConvenio
+      - CustomIdCobertura
+      - DsCobertura
+      - IdPlano
+    DR_MedicoItem:
+      type: object
+      title: Médico (item)
+      properties:
+        ID_MEDICO:
+          type: integer
+        CUSTOM_ID:
+          type: string
+        NM_MEDICO:
+          type: string
+        ID_CONSELHO:
+          type: integer
+        CRM_UF:
+          type: string
+        CRM_NR:
+          type: string
+        ID_CBO:
+          type: integer
+        ID_ESPECIALIDADE:
+          type: integer
+        DS_EMAIL:
+          type: string
+        DS_CELULAR:
+          type: string
+        DS_FIXO:
+          type: string
+      required:
+      - ID_MEDICO
+      - CUSTOM_ID
+      - NM_MEDICO
+      - ID_CONSELHO
+      - CRM_UF
+      - ID_CBO
+      - ID_ESPECIALIDADE
+    DR_Medico:
+      type: object
+      title: Médico (envelope Dados)
+      properties:
+        Dados:
+          type: array
+          items:
+            $ref: '#/components/schemas/DR_MedicoItem'
+    DR_AnestesistaItem:
+      type: object
+      title: Anestesista (item)
+      properties:
+        IdMedico:
+          type: integer
+        Cpf:
+          type: string
+        Nome:
+          type: string
+        CustomId:
+          type: integer
+        Email:
+          type: string
+        Numero:
+          type: string
+      required:
+      - IdMedico
+      - Cpf
+      - Nome
+      - CustomId
+      - Email
+      - Numero
+    DR_Anestesista:
+      type: object
+      title: Anestesista (envelope Profissionais)
+      properties:
+        Profissionais:
+          type: array
+          items:
+            $ref: '#/components/schemas/DR_AnestesistaItem'
+    ErroNovasApis:
+      type: object
+      title: Erro (novas APIs)
+      properties:
+        codigo:
+          type: string
+          description: 'Ex.: PARAMETRO_INVALIDO, NAO_AUTENTICADO, PEDIDO_NAO_ENCONTRADO, PERIODO_INVALIDO.'
+        mensagem:
+          type: string
+        correlationId:
+          type: string
+      required:
+      - codigo
+      - mensagem
+    GradeOpmeFornecedor:
+      type: object
+      title: Fornecedor padronizado
+      properties:
+        ordem:
+          type: integer
+          description: 1..3
+        nomeFornecedor:
+          type: string
+      required:
+      - ordem
+      - nomeFornecedor
+    GradeOpmeItem:
+      type: object
+      title: Item da grade de OPME
+      properties:
+        codigoTasy:
+          type: integer
+          description: Código interno (pode ser null).
+        codigoTuss:
+          type: string
+          description: Código TUSS (pode ser null).
+        descricaoComponente:
+          type: string
+        percentualUtilizacao:
+          type: integer
+          description: Percentual histórico de utilização (0..100).
+        tipoItem:
+          type: string
+          enum:
+          - OBRIGATORIO
+          - OPCIONAL
+          - CONDICIONAL
+          description: OBRIGATORIO, OPCIONAL ou CONDICIONAL.
+      required:
+      - descricaoComponente
+      - percentualUtilizacao
+      - tipoItem
+    GradeOpmeResponse:
+      type: object
+      title: Grade de OPME
+      properties:
+        codigoProcedimento:
+          type: integer
+        codigoTuss:
+          type: string
+        descricaoProcedimento:
+          type: string
+        fornecedoresPadronizados:
+          type: array
+          items:
+            $ref: '#/components/schemas/GradeOpmeFornecedor'
+          description: 0 a 3 fornecedores, ordenados por 'ordem'.
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/GradeOpmeItem'
+          description: 'Itens da grade. Sem grade cadastrada: [].'
+      required:
+      - codigoProcedimento
+      - descricaoProcedimento
+    ChecklistEtapa:
+      type: object
+      title: Etapa do checklist
+      properties:
+        codigo:
+          type: string
+          enum:
+          - F
+          - R
+          - C
+          - S
+          description: F, R, C ou S.
+        nome:
+          type: string
+          description: Fornecedor, Recebimento, CME ou Sala.
+        status:
+          type: string
+          enum:
+          - CONCLUIDA
+          - EM_ANDAMENTO
+          - ATENCAO
+          - BLOQUEIO
+          - NAO_INICIADA
+          description: Estado da etapa.
+        detalhe:
+          type: string
+          description: Detalhe textual da etapa.
+      required:
+      - codigo
+      - nome
+      - status
+    ChecklistMaterialResponse:
+      type: object
+      title: Checklist de dispensação de material
+      properties:
+        etapas:
+          type: array
+          description: Sempre as 4 etapas, na ordem F, R, C, S.
+          items:
+            $ref: '#/components/schemas/ChecklistEtapa'
+    ProcedimentoAssociado:
+      type: object
+      title: Procedimento associado
+      properties:
+        cpfMedico:
+          type: string
+          description: CPF com 11 dígitos, sem máscara.
+        codigoProcedimento:
+          type: integer
+        codigoTuss:
+          type: string
+        descricaoProcedimento:
+          type: string
+        percentualAssociacao:
+          type: number
+        quantidadeOcorrencias:
+          type: integer
+      required:
+      - cpfMedico
+      - codigoProcedimento
+      - descricaoProcedimento
+      - percentualAssociacao
+      - quantidadeOcorrencias
+    ProcedimentosAssociadosResponse:
+      type: object
+      title: Procedimentos associados
+      properties:
+        procedimentos:
+          type: array
+          description: 'Sem histórico: [].'
+          items:
+            $ref: '#/components/schemas/ProcedimentoAssociado'
+    TempoMedioItem:
+      type: object
+      title: Tempo médio (item)
+      properties:
+        cpfMedico:
+          type: string
+          description: CPF com 11 dígitos, sem máscara.
+        codigoProcedimentoPrincipal:
+          type: integer
+        tempoMedioMinutos:
+          type: integer
+        quantidadeCirurgiasBase:
+          type: integer
+      required:
+      - cpfMedico
+      - codigoProcedimentoPrincipal
+      - tempoMedioMinutos
+      - quantidadeCirurgiasBase
+    TempoMedioResponse:
+      type: object
+      title: Tempo médio de cirurgia
+      properties:
+        temposMedios:
+          type: array
+          description: 'Sem histórico: [].'
+          items:
+            $ref: '#/components/schemas/TempoMedioItem'
+    DiariaSugeridaItem:
+      type: object
+      title: Diária sugerida (item)
+      properties:
+        cpfMedico:
+          type: string
+          description: CPF com 11 dígitos, sem máscara.
+        codigoProcedimentoPrincipal:
+          type: integer
+        quantidadeDiariasSugerida:
+          type: integer
+          description: Inteiro não negativo.
+        quantidadeCirurgiasBase:
+          type: integer
+      required:
+      - cpfMedico
+      - codigoProcedimentoPrincipal
+      - quantidadeDiariasSugerida
+      - quantidadeCirurgiasBase
+    DiariasSugeridasResponse:
+      type: object
+      title: Sugestão de diárias
+      properties:
+        diariasSugeridas:
+          type: array
+          description: 'Sem histórico: [].'
+          items:
+            $ref: '#/components/schemas/DiariaSugeridaItem'
