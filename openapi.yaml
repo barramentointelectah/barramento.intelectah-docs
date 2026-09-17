@@ -12,6 +12,10 @@ info:
 
     - **HIS → Neoh**: callbacks que o HIS envia à API do Neoh. Autenticação por headers **`client_id`/`client_secret`**; base no servidor do Neoh.
 
+    - **Perfis de integração**: algumas rotas do sentido Neoh → HIS têm duas variantes, **Token** e **MDM**, com verbo e corpo diferentes. O perfil vigente é definido por configuração do hospital. Cada operação declara o seu em `x-perfil-integracao`. Hoje isso afeta `/cancelar` e `/troca-fase`.
+
+    - **Estado de implementação**: as rotas marcadas com `x-implementacao` têm o contrato publicado mas ainda não são consumidas pelo Neoh nesta versão.
+
 
     Cada operação declara em `servers` a base correta e o `security` do seu sentido. Onde o corpo de resposta não tem schema de campos publicado, isso é indicado explicitamente na descrição da rota.'
 servers:
@@ -32,7 +36,7 @@ servers:
       description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente.'
 tags:
 - name: Neoh→HIS · Autenticação
-  description: Emissão/revogação do Bearer token do Barramento (credenciais em headers hifenizados).
+  description: Emissão do Bearer token do Barramento (credenciais em headers `client_id`/`client_secret`/`grant_type`).
 - name: Neoh→HIS · Paciente & Cadastro
   description: Localização e cadastro (simplificado/completo) do paciente no HIS.
 - name: Neoh→HIS · Agenda & Mapa
@@ -56,6 +60,10 @@ paths:
       - Neoh→HIS · Autenticação
       operationId: emitirToken
       summary: Emite o Bearer token (client_credentials)
+      description: 'Credenciais enviadas em **headers**. A requisição não tem corpo.
+
+
+        O token devolvido é aplicado nas demais rotas do sentido Neoh → HIS no header `Authorization: {token_type} {access_token}`.'
       security: []
       servers:
       - url: '{baseUrl}'
@@ -65,19 +73,21 @@ paths:
             default: https://barramento.hospital.example
             description: Host + prefixo do barramento do HIS. Fornecido pela Intelectah/HIS por ambiente.
       parameters:
-      - name: Client-ID
+      - name: client_id
         in: header
         required: true
         schema:
           type: string
-        description: Client ID
-      - name: Client-Secret
+          example: neoh
+        description: Identificador de acesso, fornecido pela equipe do barramento.
+      - name: client_secret
         in: header
         required: true
         schema:
           type: string
-        description: Client secret
-      - name: Grant-Type
+          example: neoh123
+        description: Segredo de acesso, fornecido pela equipe do barramento.
+      - name: grant_type
         in: header
         required: true
         schema:
@@ -91,60 +101,27 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - access_token
+                - token_type
                 properties:
                   access_token:
                     type: string
                   token_type:
                     type: string
-                    example: Bearer
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    description: Validade do token, em segundos.
+                    example: 3600
               example:
-                access_token: eyJhbGciOi...
-                token_type: Bearer
+                access_token: abc1234
+                token_type: bearer
+                expires_in: 3600
         '400':
-          description: '|'
+          description: Credenciais ausentes ou malformadas.
         '401':
-          description: ''
-    delete:
-      tags:
-      - Neoh→HIS · Autenticação
-      operationId: revogarToken
-      summary: Revoga o token ativo
-      security: []
-      servers:
-      - url: '{baseUrl}'
-        description: Base do HIS (barramento). Usada por todas as rotas do sentido Neoh → HIS.
-        variables:
-          baseUrl:
-            default: https://barramento.hospital.example
-            description: Host + prefixo do barramento do HIS. Fornecido pela Intelectah/HIS por ambiente.
-      parameters:
-      - name: Client-ID
-        in: header
-        required: true
-        schema:
-          type: string
-      - name: Client-Secret
-        in: header
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Token revogado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: revoked
-        '400':
-          description: ''
-        '401':
-          description: ''
-        '404':
-          description: ''
+          description: Credenciais inválidas.
   /consultar-paciente:
     get:
       tags:
@@ -478,7 +455,12 @@ paths:
       tags:
       - Neoh→HIS · Agenda & Mapa
       operationId: cancelarAgenda
-      summary: Cancela agendamento cirúrgico
+      summary: Cancela agendamento cirúrgico (perfil Token)
+      description: 'Perfil **Token**. Corpo em PascalCase.
+
+
+        O Neoh não consome o corpo da resposta desta rota — o resultado é avaliado pelo status HTTP.'
+      x-perfil-integracao: token
       security:
       - bearerAuth: []
       requestBody:
@@ -488,30 +470,41 @@ paths:
             schema:
               type: object
               required:
-              - agendaPaciente
-              - usuario
-              - motivoCancelamento
-              - descrCancelamento
+              - CdAvisoCirurgia
+              - CdCancelamento
+              - CdMultiEmpresa
+              - UsuarioHis
               properties:
-                agendaPaciente:
+                CdAvisoCirurgia:
+                  type: string
+                  description: Sequencial da agenda a cancelar (NR_SEQ_AGENDA).
+                CdCancelamento:
                   type: integer
-                  description: Sequencial da agenda a cancelar
-                usuario:
-                  type: string
-                motivoCancelamento:
-                  type: string
-                  description: Código do motivo (ver /dados-referencia?entidade=motivo-cancelamento)
-                descrCancelamento:
-                  type: string
-                cdPerfil:
+                  description: Código do motivo (ver /dados-referencia?entidade=motivo-cancelamento).
+                CdMultiEmpresa:
                   type: integer
-                  default: 1848
-                  description: Perfil de sessão
+                  description: Código da unidade/multi-empresa.
+                UsuarioHis:
+                  type: string
+                  description: Login do usuário no HIS.
+                DsObservacoes:
+                  type: string
+                  description: Observação do cancelamento.
+                DataInicioCirurgia:
+                  type: string
+                  description: 'Data e hora de início da cirurgia, no formato yyyy-MM-dd HH:mm:ss.'
+                IdSala:
+                  type: integer
+                  nullable: true
+                  description: Sala da cirurgia cancelada.
             example:
-              agendaPaciente: 3688948222
-              usuario: NEOH
-              motivoCancelamento: '1'
-              descrCancelamento: Paciente desistiu
+              CdAvisoCirurgia: '3688948222'
+              CdCancelamento: 1
+              CdMultiEmpresa: 12
+              UsuarioHis: NEOH
+              DsObservacoes: Paciente desistiu
+              DataInicioCirurgia: '2026-09-20 08:00:00'
+              IdSala: 45
       responses:
         '200':
           description: Cancelado
@@ -526,6 +519,59 @@ paths:
                     type: string
                   agendaPaciente:
                     type: integer
+                  numeroCirurgia:
+                    type: string
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+    delete:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: cancelarAgendaMdm
+      summary: Cancela agendamento cirúrgico (perfil MDM)
+      description: 'Perfil **MDM**. Os dados vão na própria URL, não em corpo.
+
+
+        Depois do cancelamento o Neoh dispara a regeração dos horários livres da sala.'
+      x-perfil-integracao: mdm
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: nrSeqAgendaPaciente
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Sequencial da agenda do paciente a cancelar (NR_SEQ_AGENDA).
+      - name: nmUsuario
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Login do usuário no HIS.
+      - name: cdMotivo
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Código do motivo de cancelamento.
+      - name: dsObservacao
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Descrição/observação do cancelamento.
+      responses:
+        '200':
+          description: Cancelado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   numeroCirurgia:
                     type: string
         '400':
@@ -1207,6 +1253,8 @@ paths:
       - Neoh→HIS · Integrar Pedido
       operationId: integrarPedidoCirurgiaMedicamento
       summary: Itens de medicamento (insumos)
+      description: '**Contrato acordado — ainda não consumido pelo Neoh.** A integração de medicamentos do pedido não está implementada nesta versão.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       requestBody:
@@ -1820,6 +1868,8 @@ paths:
       - Neoh→HIS · Edição de Pedido
       operationId: cirurgiaCheckpoint
       summary: Insere avaliação/checkpoint da cirurgia
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** Especificada na documentação de Integrar Pedido; sem implementação correspondente nesta versão.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       requestBody:
@@ -1911,6 +1961,8 @@ paths:
       - Neoh→HIS · Edição de Pedido
       operationId: verificarDisponibilidade
       summary: Verifica slot livre de sala em data/hora
+      description: '**Rota não consumida pelo Neoh.** Publicada como referência de contrato; não há implementação correspondente nesta versão.'
+      x-implementacao: nao-localizado
       security:
       - bearerAuth: []
       requestBody:
@@ -2073,7 +2125,65 @@ paths:
       tags:
       - Neoh→HIS · Edição de Pedido
       operationId: trocaFase
-      summary: Troca fase da autorização e/ou status da agenda
+      summary: Troca a fase da agenda (perfil Token)
+      description: 'Perfil **Token**. Corpo em PascalCase, com um conjunto de campos diferente do perfil MDM.
+
+
+        A chamada não retorna corpo — o resultado é avaliado pelo status HTTP.'
+      x-perfil-integracao: token
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - CdAvisoCirurgia
+              - CdMultiEmpresa
+              - UsuarioHis
+              - Fase
+              properties:
+                CdAvisoCirurgia:
+                  type: integer
+                  description: Código da agenda/aviso de cirurgia.
+                CdMultiEmpresa:
+                  type: integer
+                  description: Código da unidade/multi-empresa.
+                UsuarioHis:
+                  type: string
+                  description: Login do usuário no HIS.
+                Fase:
+                  type: string
+                  description: Novo status da agenda.
+            example:
+              CdAvisoCirurgia: 3688948222
+              CdMultiEmpresa: 12
+              UsuarioHis: NEOH
+              Fase: C
+      responses:
+        '200':
+          description: Fase atualizada.
+        '400':
+          description: Campo obrigatório ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+    put:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: trocaFaseMdm
+      summary: Troca fase da autorização e/ou status da agenda (perfil MDM)
+      description: 'Perfil **MDM**.
+
+
+        Atenção aos dois padrões de nome no mesmo corpo: `LoginHis` e `CdMultiEmpresa` vão em PascalCase, os demais campos em camelCase.
+
+
+        A chamada não retorna corpo — o resultado é avaliado pelo status HTTP.'
+      x-perfil-integracao: mdm
       security:
       - bearerAuth: []
       requestBody:
@@ -2087,38 +2197,41 @@ paths:
               - avisoCirurgia
               - agendaStatus
               - agenda
+              - LoginHis
+              - CdMultiEmpresa
               properties:
                 nrSeqEstagio:
                   type: integer
-                  description: ''
+                  description: Número sequencial do estágio.
                 avisoCirurgia:
                   type: integer
-                  description: ''
+                  description: Código do aviso de cirurgia.
                 agendaStatus:
                   type: string
-                  description: Novo valor de
+                  description: Novo status da agenda.
                 agenda:
                   type: integer
-                  description: ''
+                  description: Código da agenda.
                 autorizacaoStatus:
                   type: string
-                  description: Novo valor de
+                  description: Novo status da autorização.
+                LoginHis:
+                  type: string
+                  description: Login do usuário no HIS.
+                CdMultiEmpresa:
+                  type: integer
+                  description: Código da unidade/multi-empresa.
             example:
               nrSeqEstagio: 46
               avisoCirurgia: 3688948222
               agendaStatus: C
               agenda: 3688948222
               autorizacaoStatus: '46'
+              LoginHis: NEOH
+              CdMultiEmpresa: 12
       responses:
         '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  saida:
-                    type: boolean
+          description: Fase atualizada.
         '400':
           description: Campo obrigatório ausente
           content:
@@ -2770,7 +2883,11 @@ paths:
       - Neoh→HIS · Portal do Médico & Painel (novas APIs)
       operationId: gradeOpme
       summary: Grade de OPME de um procedimento
-      description: Retorna a grade de OPME (fornecedores padronizados + itens) de um procedimento, para o Portal do Médico. Consumo em tempo real. Resultados são sugestões editáveis.
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** O contrato funcional está especificado; não há implementação correspondente no Neoh nesta versão.
+
+
+        Retorna a grade de OPME (fornecedores padronizados + itens) de um procedimento, para o Portal do Médico. Consumo em tempo real. Resultados são sugestões editáveis.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       parameters:
@@ -2829,7 +2946,11 @@ paths:
       - Neoh→HIS · Portal do Médico & Painel (novas APIs)
       operationId: checklistDispensacaoMaterial
       summary: Checklist de dispensação de material do pedido
-      description: Retorna o status das 4 etapas (Fornecedor, Recebimento, CME, Sala) da dispensação de material de um pedido, para o Painel Cirúrgico. Consumo em tempo real. O frontend define cor/símbolo a partir de `status`.
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** O contrato funcional está especificado; não há implementação correspondente no Neoh nesta versão.
+
+
+        Retorna o status das 4 etapas (Fornecedor, Recebimento, CME, Sala) da dispensação de material de um pedido, para o Painel Cirúrgico. Consumo em tempo real. O frontend define cor/símbolo a partir de `status`.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       parameters:
@@ -2888,7 +3009,11 @@ paths:
       - Neoh→HIS · Portal do Médico & Painel (novas APIs)
       operationId: procedimentosAssociados
       summary: Procedimentos associados (histórico)
-      description: Retorna, por médico e procedimento principal, os procedimentos frequentemente associados no período. Consumo periódico. Não retorna dados de pacientes.
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** O contrato funcional está especificado; não há implementação correspondente no Neoh nesta versão.
+
+
+        Retorna, por médico e procedimento principal, os procedimentos frequentemente associados no período. Consumo periódico. Não retorna dados de pacientes.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       parameters:
@@ -2955,7 +3080,11 @@ paths:
       - Neoh→HIS · Portal do Médico & Painel (novas APIs)
       operationId: tempoMedioCirurgia
       summary: Tempo médio de cirurgia (histórico)
-      description: Retorna o tempo médio (em minutos) por médico e procedimento principal no período. Consumo periódico. Considera apenas cirurgias concluídas.
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** O contrato funcional está especificado; não há implementação correspondente no Neoh nesta versão.
+
+
+        Retorna o tempo médio (em minutos) por médico e procedimento principal no período. Consumo periódico. Considera apenas cirurgias concluídas.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       parameters:
@@ -3022,7 +3151,11 @@ paths:
       - Neoh→HIS · Portal do Médico & Painel (novas APIs)
       operationId: diariasSugeridas
       summary: Sugestão de diárias (histórico)
-      description: Retorna a quantidade de diárias sugerida por médico e procedimento principal no período. Consumo periódico. Considera apenas internações concluídas.
+      description: '**Rota proposta — ainda não consumida pelo Neoh.** O contrato funcional está especificado; não há implementação correspondente no Neoh nesta versão.
+
+
+        Retorna a quantidade de diárias sugerida por médico e procedimento principal no período. Consumo periódico. Considera apenas internações concluídas.'
+      x-implementacao: proposta
       security:
       - bearerAuth: []
       parameters:
