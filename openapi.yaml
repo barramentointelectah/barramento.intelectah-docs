@@ -455,11 +455,24 @@ paths:
       tags:
       - Neoh→HIS · Agenda & Mapa
       operationId: cancelarAgenda
-      summary: Cancela agendamento cirúrgico (perfil Token)
-      description: 'Perfil **Token**. Corpo em PascalCase.
+      summary: Cancela agendamento cirúrgico (POST — contrato novo ou rota antiga)
+      description: >
+        Perfil **Token**, por POST. O mesmo parâmetro de URL
+        (`barramento_external_rota_post_cancelar_pedido`) atende três caminhos no código, escolhidos
+        por configuração do hospital:
 
 
-        O Neoh não consome o corpo da resposta desta rota — o resultado é avaliado pelo status HTTP.'
+        1. `barramento_usar_rota_antiga_cancelar` ligado → **rota antiga**, corpo
+        `CancelamentoAgendaAntigoRequest` (camelCase, com `cdPerfil`);
+
+        2. senão, `barramento_mdm_client_id` preenchido → perfil **MDM**, que usa o `DELETE` desta
+        mesma rota;
+
+        3. senão → **contrato novo**, corpo `CancelamentoAgendaRequest` (PascalCase) — é o padrão.
+
+
+        Quem for implementar hoje deve expor o contrato novo. O Neoh não consome o corpo da resposta
+        desta rota: o resultado é avaliado pelo status HTTP.
       x-perfil-integracao: token
       security:
       - bearerAuth: []
@@ -468,35 +481,9 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - CdAvisoCirurgia
-              - CdCancelamento
-              - CdMultiEmpresa
-              - UsuarioHis
-              properties:
-                CdAvisoCirurgia:
-                  type: string
-                  description: Sequencial da agenda a cancelar (NR_SEQ_AGENDA).
-                CdCancelamento:
-                  type: integer
-                  description: Código do motivo (ver /dados-referencia?entidade=motivo-cancelamento).
-                CdMultiEmpresa:
-                  type: integer
-                  description: Código da unidade/multi-empresa.
-                UsuarioHis:
-                  type: string
-                  description: Login do usuário no HIS.
-                DsObservacoes:
-                  type: string
-                  description: Observação do cancelamento.
-                DataInicioCirurgia:
-                  type: string
-                  description: 'Data e hora de início da cirurgia, no formato yyyy-MM-dd HH:mm:ss.'
-                IdSala:
-                  type: integer
-                  nullable: true
-                  description: Sala da cirurgia cancelada.
+              oneOf:
+              - $ref: '#/components/schemas/CancelamentoAgendaRequest'
+              - $ref: '#/components/schemas/CancelamentoAgendaAntigoRequest'
             example:
               CdAvisoCirurgia: '3688948222'
               CdCancelamento: 1
@@ -3438,6 +3425,73 @@ components:
       properties:
         Message:
           type: string
+    CancelamentoAgendaRequest:
+      type: object
+      description: >
+        Contrato novo do cancelamento (objeto `CancelamentoCirurgiaVM`), conferido campo a campo
+        contra o código e contra a planilha `NEOH - Cancelar (novo)`. É o corpo que o Neoh envia
+        quando o hospital não está na rota antiga nem no perfil MDM.
+      required:
+      - CdAvisoCirurgia
+      - CdCancelamento
+      - CdMultiEmpresa
+      - UsuarioHis
+      properties:
+        CdAvisoCirurgia:
+          type: string
+          description: Sequencial da agenda a cancelar (NR_SEQ_AGENDA).
+        CdCancelamento:
+          type: integer
+          description: Código do motivo (ver /dados-referencia?entidade=motivo-cancelamento).
+        CdMultiEmpresa:
+          type: integer
+          description: Código da unidade/multi-empresa.
+        UsuarioHis:
+          type: string
+          description: Login do usuário no HIS.
+        DsObservacoes:
+          type: string
+          nullable: true
+          description: Observação do cancelamento.
+        DataInicioCirurgia:
+          type: string
+          nullable: true
+          description: Início da cirurgia, em `yyyy-MM-dd HH:mm:ss`.
+        IdSala:
+          type: integer
+          nullable: true
+          description: Sala da cirurgia cancelada.
+    CancelamentoAgendaAntigoRequest:
+      type: object
+      description: >
+        Corpo da **rota antiga** de cancelamento (objeto `CancelamentoBarramentoAntigo`), usado só
+        quando o hospital tem `barramento_usar_rota_antiga_cancelar` ligado. Mantido aqui para os
+        hospitais que ainda estão nessa configuração; integração nova deve usar
+        `CancelamentoAgendaRequest`. O registro dessa variante na OFICIAL é a aba
+        `ProcCancelarAgendaPaciente` da planilha de transferir e cancelar.
+      required:
+      - agendaPaciente
+      - usuario
+      - motivoCancelamento
+      - descrCancelamento
+      properties:
+        agendaPaciente:
+          type: integer
+          format: int64
+          description: Sequencial da agenda do paciente a cancelar.
+        usuario:
+          type: string
+          description: Login do usuário no HIS.
+        motivoCancelamento:
+          type: string
+          description: Código do motivo de cancelamento, enviado como texto.
+        descrCancelamento:
+          type: string
+          description: Descrição/observação do cancelamento.
+        cdPerfil:
+          type: integer
+          description: Perfil usado na execução do script no HIS.
+          example: 1848
     CadastroSimplificadoRequest:
       type: object
       required:
