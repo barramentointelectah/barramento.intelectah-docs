@@ -641,11 +641,11 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/MapaHorarioOcupado'
-                  HorarioEquipamentosOcupados:
+                  horariosEquipamentosOcupados:
                     type: array
                     items:
                       $ref: '#/components/schemas/MapaEquipamentoOcupado'
-                  EquipamentosDisponiveis:
+                  horariosEquipamentosDisponiveis:
                     type: array
                     items:
                       $ref: '#/components/schemas/MapaEquipamentoDisponivel'
@@ -670,14 +670,14 @@ paths:
                   dsCirurgia: Artrodese de coluna
                   idMedico: 65422
                   nmMedico: Médico fulano de tal
-                HorarioEquipamentosOcupados:
+                horariosEquipamentosOcupados:
                 - IDEQUIPAMENTO: 150
                   CdMultiEmpresa: 1
                   DATAINICIO: '2023-06-30 13:00:00'
                   DATAFIM: '2023-06-30 15:00:00'
                   IDSALA: 1
                   QTDUTILIZADA: 1
-                EquipamentosDisponiveis:
+                horariosEquipamentosDisponiveis:
                 - ID_EQUIPAMENTO: 150
                   CdMultiEmpresa: 1
                   QT_DISPONIVEL: 4
@@ -1111,7 +1111,7 @@ paths:
               - idBupUnidade
               - idAgenda
               - loginUsuario
-              - material
+              - medicamentos
               properties:
                 idBupUnidade:
                   type: integer
@@ -1122,18 +1122,21 @@ paths:
                 loginUsuario:
                   type: string
                   description: Login (alias login)
-                material:
+                medicamentos:
                   type: array
+                  description: >
+                    Lista de materiais. A chave é `medicamentos` — é o nome que o Neoh envia no
+                    corpo, ainda que o conteúdo seja material.
                   items:
                     $ref: '#/components/schemas/MaterialItem'
             example:
               idBupUnidade: 61
               idAgenda: 3688948222
               loginUsuario: NEOH
-              material:
+              medicamentos:
               - action: new
-                idMaterial: 4521
-                Quantidade: 2
+                dsProduto: '4521'
+                quantidade: 2
       responses:
         '200':
           description: '`{message:[...]}` — array de resultados por item.'
@@ -1363,7 +1366,10 @@ paths:
                   description: Alias idConvenio; usado em Execute, não validado
                 idCategoriaConvenio:
                   type: integer
-                  description: Alias IdCategoriaConvenio; usado em Execute, não validado
+                  nullable: true
+                  description: >
+                    Aceito pelo HIS (`cd_categoria`), mas o Neoh não envia este campo nesta rota.
+                  x-enviado-pelo-neoh: false
                 idBupPlano:
                   type: string
                   description: Só new
@@ -1762,34 +1768,53 @@ paths:
               type: object
               required:
               - idBupUnidade
-              - idAgenda
-              - loginUsuario
+              - agenda
+              - dataAtualizacao
+              - usuario
               - dataHistorico
+              - nomeUsuario
               - historico
+              - prioridade
               properties:
                 idBupUnidade:
                   type: integer
-                idAgenda:
+                  description: Código corporativo da unidade.
+                agenda:
                   type: integer
-                loginUsuario:
+                  format: int64
+                  description: Sequencial da agenda no HIS.
+                dataAtualizacao:
                   type: string
+                  description: Data/hora da atualização, em `yyyy-MM-dd HH:mm:ss`.
                 usuario:
                   type: string
-                  description: Usado em Execute, não validado
+                  description: Login do usuário no HIS.
                 dataHistorico:
                   type: string
-                  format: date-time
+                  description: Data/hora do histórico, em `yyyy-MM-dd HH:mm:ss`.
+                nomeUsuario:
+                  type: string
+                  description: Pessoa física correspondente ao usuário no HIS.
                 historico:
                   type: string
+                  description: Texto do histórico.
+                prioridade:
+                  type: string
+                  description: Prioridade do histórico.
+                  example: A
                 tipoSequencia:
                   type: string
-                  description: Usado em Execute, não validado
+                  nullable: true
+                  description: Tipo do histórico, quando o hospital usa tipagem.
             example:
               idBupUnidade: 61
-              idAgenda: 3688948222
-              loginUsuario: NEOH
+              agenda: 3688948222
+              dataAtualizacao: '2026-08-20 09:00:00'
               usuario: NEOH
               dataHistorico: '2026-08-20 09:00:00'
+              nomeUsuario: NEOH
+              historico: Pedido integrado pelo Neoh
+              prioridade: A
               historico: Pedido criado
               tipoSequencia: '1'
       responses:
@@ -2243,7 +2268,16 @@ paths:
       tags:
       - Neoh→HIS · Edição de Pedido
       operationId: integrarAnexo
-      summary: Insere ou remove (soft-delete) anexo da agenda
+      summary: Envia anexos da agenda (um por requisição)
+      description: >
+        Rota de anexos do barramento, resolvida pelo parâmetro `barramento_rota_integrar_anexos`.
+        O Neoh envia **um anexo por requisição**, com o arquivo embutido em base64.
+
+
+        Quando o hospital não tem esse parâmetro configurado, o Neoh cai na rota legada de anexos
+        do HIS, que recebe um corpo diferente (`action` + `filePath`/`observacao` para inclusão,
+        `nrSequenciaAgenda`/`nrSequenciaAutorizacao` para remoção). Essa rota legada não é
+        publicada aqui — quem for implementar o barramento deve expor a rota desta página.
       security:
       - bearerAuth: []
       requestBody:
@@ -2253,42 +2287,38 @@ paths:
             schema:
               type: object
               required:
-              - login
-              - idAgenda
-              - action
+              - CdAvisoCirurgia
+              - CdMultiEmpresa
+              - UsuarioHis
+              - Anexos
               properties:
-                login:
+                CdAvisoCirurgia:
                   type: string
-                idAgenda:
+                  description: Código do aviso cirúrgico no HIS.
+                CdMultiEmpresa:
                   type: integer
-                action:
+                  description: Código corporativo da unidade.
+                UsuarioHis:
                   type: string
-                  enum:
-                  - insert
-                  - new
-                  - delete
-                filePath:
+                  description: Login do usuário no HIS, sempre em maiúsculas.
+                NomePaciente:
                   type: string
-                  description: ''
-                observacao:
-                  type: string
-                  description: ''
-                tipoAnexo:
-                  type: string
-                  description: ''
-                nrSequenciaAgenda:
-                  type: integer
-                  description: Obrigatório se delete — sequencial do anexo a remover
-                idBUPUnidade:
-                  type: integer
-                  description: Aceito, não bindado
+                  nullable: true
+                Anexos:
+                  type: array
+                  description: Lista com um anexo — o Neoh faz uma requisição por arquivo.
+                  items:
+                    $ref: '#/components/schemas/AnexoIntegracaoItem'
             example:
-              login: NEOH
-              idAgenda: 3688948222
-              action: insert
-              filePath: /anexos/exame.pdf
-              observacao: Exame pré-operatório
-              tipoAnexo: '1'
+              CdAvisoCirurgia: '3688948222'
+              CdMultiEmpresa: 61
+              UsuarioHis: NEOH
+              NomePaciente: MARIA DA SILVA
+              Anexos:
+              - TipoDocumento: 1
+                Extensao: .pdf
+                FileName: exame-pre-operatorio.pdf
+                Blob: JVBERi0xLjQKJc...
       responses:
         '200':
           description: Delete → {status}
@@ -3500,148 +3530,171 @@ components:
           description: Sem lookup de código de país
     AgendaPacienteRequest:
       type: object
+      description: >
+        Corpo da cabeça da agenda cirúrgica, exatamente como o Neoh o envia (objeto `AgendaPaciente`
+        do barramento, conferido campo a campo contra o código). Onde o HIS aceita um nome
+        equivalente, o alias vem anotado no próprio campo.
+
+
+        O HIS também aceita, mas o Neoh **não envia**: `cdProcedimento`, `statusAgenda`,
+        `ieOrigemProced`, `idMedico`, `idCategoriaConvenio`, `nrSeqProcInterno`, `usuarioOrigem`,
+        `dtAgendamento` e `cdPerfil` — os procedimentos vão na rota própria
+        (`/integrar-pedido/cirurgia-procedimento`).
       required:
       - idAgenda
+      - idBupUnidade
       - loginUsuario
-      - dtNascimento
-      - ieAnestesia
-      - nmPaciente
-      - qtIdadePaciente
-      - qtIdadeMes
-      - telefone
-      - dtPrevistaInternacao
-      - catAtendimento
-      - idConvenio
-      - idPaciente
-      - idBupPlano
       properties:
         idAgenda:
           type: integer
-          description: Aceita alias nrSequencia
-        loginUsuario:
-          type: string
-          description: Aceita alias login
-        dtNascimento:
-          type: string
-          format: date-time
-        ieAnestesia:
-          type: string
-        ieAutorizacao:
-          type: string
-          description: Opcional; fallback = valor atual da linha
-        nmPaciente:
-          type: string
-        qtIdadePaciente:
-          type: integer
-        qtIdadeMes:
-          type: integer
-        telefone:
-          type: string
-        dtPrevistaInternacao:
-          type: string
-          format: date-time
-        cdProcedimento:
-          type: integer
-          description: Opcional; fallback = valor atual da linha
-        statusAgenda:
-          type: string
-          description: Opcional; fallback = valor atual, senão N
-        catAtendimento:
-          type: string
-          description: Aceita alias caraterAtendimento
-        idConvenio:
-          type: integer
-          description: Aceita alias idBupConvenio
-        idPaciente:
-          type: integer
-        ieOrigemProced:
-          type: string
-          description: Opcional; fallback = valor atual da linha
-        idBupPlano:
-          type: string
-        idMedico:
-          type: integer
-          description: Opcional; fallback = valor atual da linha
-        idCategoriaConvenio:
-          type: integer
-          description: Opcional; fallback = valor atual da linha
-        nrSeqProcInterno:
-          type: integer
-          description: Opcional; fallback = valor atual da linha
-        usuarioOrigem:
-          type: string
-          description: Opcional; fallback = loginUsuario (nome não confirmado)
-        dtAgendamento:
-          type: string
-          format: date-time
-          description: Opcional; fallback = timestamp de save (nome não confirmado)
-    CirurgiaAgendaRequest:
-      type: object
-      required:
-      - idBupUnidade
-      - idAgenda
-      - loginUsuario
-      properties:
+          format: int64
+          description: Código da agenda no HIS. O HIS aceita o alias `nrSequencia`.
+          example: 123456
         idBupUnidade:
           type: integer
-        idAgenda:
-          type: integer
+          description: Código corporativo da unidade (estabelecimento) no HIS.
+          example: 1
         loginUsuario:
           type: string
-          description: Aceita fallback `login`
+          description: Login do usuário no HIS. O HIS aceita o alias `login`.
+          example: daniel.koga
+        idBupProfissional:
+          type: integer
+          format: int64
+          nullable: true
+          description: Código do anestesista no HIS.
         dtNascimento:
           type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-          format: date-time
-        ieAnestesia:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        ieAutorizacao:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        nmPaciente:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        telefone:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        dtPrevistaInternacao:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-          format: date-time
-        cdProcedimento:
+          nullable: true
+          description: Data de nascimento do paciente, em `yyyy-MM-dd`.
+          example: "1980-04-27"
+        idBupConvenio:
           type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        catAtendimento:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        idConvenio:
-          type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        idPaciente:
-          type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        ieOrigemProced:
-          type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
+          format: int64
+          description: Código do convênio no HIS. O HIS aceita o alias `idConvenio`.
         idBupPlano:
           type: string
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        idMedico:
-          type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        idCategoriaConvenio:
-          type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        nrSeqProcInterno:
-          type: integer
-          description: Não validado por Validate, mas usado em Execute — omitir pode gravar valor vazio
-        statusAgenda:
+          description: Código do plano no HIS.
+        idCid:
           type: string
-          description: 'Precedência: payload > status atual > N'
-        cdPerfil:
+          nullable: true
+          description: CID principal do pedido; string vazia quando não há.
+        idPaciente:
           type: integer
-          default: 1848
+          nullable: true
+          description: Código do paciente no HIS.
+        novoPaciente:
+          type: boolean
+          description: "`true` quando o paciente foi cadastrado nesta integração."
+        tipoAcomodacao:
+          type: integer
+          nullable: true
+          description: Tipo de acomodação no HIS. Default 1 quando o pedido não traz.
+        numeroCarteira:
+          type: string
+          nullable: true
+        validadeCarteira:
+          type: string
+          nullable: true
+          description: Validade da carteirinha, em `yyyy-MM-dd`.
+        observacoesExtras:
+          type: string
+          nullable: true
+        dtPrevistaInternacao:
+          type: string
+          nullable: true
+          description: Data prevista de internação, em `yyyy-MM-dd HH:mm:ss`.
+        possuiSangue:
+          type: string
+          enum: [S, N]
+          description: Reserva de sangue.
+        possuiEquipamento:
+          type: string
+          enum: [S, N]
+          description: Há equipamentos no pedido.
+        reservaLeito:
+          type: string
+          nullable: true
+        reservaUti:
+          type: string
+          enum: [S, N]
+        tecnica:
+          type: string
+          enum: [S, N]
+          description: "`S` quando a técnica é vídeo."
+        caraterAtendimento:
+          type: string
+          description: Código do caráter de atendimento no HIS. O HIS aceita o alias `catAtendimento`.
+        nmPaciente:
+          type: string
+        duracaoCirurgia:
+          type: integer
+          description: Duração prevista, em minutos.
+        qtdDiasInternacao:
+          type: integer
+        telefone:
+          type: string
+          nullable: true
+        qtIdadePaciente:
+          type: integer
+          description: Idade em anos, calculada pelo Neoh.
+        qtIdadeMes:
+          type: integer
+          description: Idade em meses, calculada pelo Neoh.
+        cdAgenda:
+          type: integer
+          nullable: true
+          description: Código da sala cirúrgica no HIS.
+        dtAgenda:
+          type: string
+          nullable: true
+          description: Data da cirurgia, em `yyyy-MM-dd`.
+        hrInicio:
+          type: string
+          nullable: true
+          description: Início da cirurgia, em `yyyy-MM-dd HH:mm:ss`.
+        nrReserva:
+          type: string
+          nullable: true
+          description: Número da reserva devolvido pela consulta de agenda.
+        ieAnestesia:
+          type: string
+          nullable: true
+          description: Origem/tipo de anestesia.
+        ieTipoAtendimento:
+          type: integer
+          description: Origem da internação, no código do HIS.
+        canalAgendamento:
+          type: integer
+          description: Canal de agendamento configurado por hospital.
+        tipoClassificacao:
+          type: integer
+          nullable: true
+          description: Classificação da gestação.
+        idadeGestacional:
+          type: integer
+          nullable: true
+        procedenciaAgendamento:
+          type: integer
+          nullable: true
+        nrAtendimento:
+          type: integer
+          nullable: true
+          description: Código do atendimento no HIS, quando já existe.
+        tipoAgendamento:
+          type: integer
+          nullable: true
+          description: Eletiva ou encaixe, conforme o caráter do atendimento.
+        honorariosMedico:
+          type: integer
+          nullable: true
+    CirurgiaAgendaRequest:
+      description: >
+        Mesmo corpo de `/agenda-paciente`: as duas rotas recebem o objeto `AgendaPaciente` e
+        resolvem a mesma URL por hospital. Mantida como schema próprio só para a leitura da
+        rota de integração de pedido.
+      allOf:
+      - $ref: '#/components/schemas/AgendaPacienteRequest'
     EquipamentoItem:
       type: object
       required:
@@ -3744,18 +3797,20 @@ components:
           - delete
         nrSequenciaMed:
           type: integer
-          description: Chave
+          nullable: true
+          description: Chave do item no HIS; volta preenchida na resposta.
         dsProduto:
           type: string
-        Quantidade:
+          description: Código/descrição do material.
+        quantidade:
           type: integer
-          description: ''
+          description: Quantidade do item.
         ieSituacao:
           type: string
-          description: Só new
+          nullable: true
         tipoItem:
-          type: string
-          description: Só new
+          type: integer
+          description: Tipo do item.
     ProcedimentoItem:
       type: object
       required:
@@ -3864,48 +3919,74 @@ components:
           type: string
     AutorizacaoConvenioRequest:
       type: object
+      description: >
+        Corpo que o Neoh envia ao gerar a autorização de convênio do pedido (objeto
+        `AutorizacaoConvenio`), conferido campo a campo contra o código e contra a planilha
+        VACCF da rota.
       required:
-      - idBupUnidade
       - idAgenda
-      - loginUsuario
+      - idBupUnidade
+      - idBupConvenio
+      - idBupPlano
+      - login
+      - cdCirurgia
       - guias
       properties:
-        idBupUnidade:
-          type: integer
-          description: Alias cdEstabelecimento
         idAgenda:
           type: integer
-        loginUsuario:
-          type: string
-        cdCirurgia:
-          type: integer
-          description: Usado em Execute, não validado por Validate
-        idBupConvenio:
-          type: integer
-          description: Usado em Execute, não validado por Validate
-        idPaciente:
-          type: integer
-          description: Usado em Execute, não validado por Validate
+          format: int64
+          description: Sequencial da agenda no HIS.
         nrSeqEstagio:
           type: integer
-          description: Usado em Execute, não validado por Validate
-        idCategoriaConvenio:
+          nullable: true
+          description: Estágio inicial da autorização, parametrizado por hospital.
+        idBupPlano:
+          type: string
+          description: Código do plano no HIS.
+        idBupConvenio:
           type: integer
-          description: Usado em Execute, não validado por Validate
-        idBupProfissional:
+          format: int64
+          description: Código do convênio no HIS.
+        cdCirurgia:
           type: integer
-          description: Usado em Execute, não validado por Validate
-        nrSeqAutorizacao:
+          description: Procedimento principal do pedido.
+        idBupUnidade:
           type: integer
-          description: ''
+          description: Código corporativo da unidade.
         login:
           type: string
-          description: 'Fallback loginUsuario via ResolveLogin (PR #89)'
+          description: Login do usuário no HIS.
+        idBupProfissional:
+          type: integer
+          format: int64
+          description: Médico solicitante.
+        novoPaciente:
+          type: boolean
+          description: "`true` quando o paciente foi cadastrado nesta integração."
+        idPaciente:
+          type: integer
+          nullable: true
+          description: Código do paciente no HIS.
         cdAcomodacao:
+          type: integer
+          nullable: true
+          description: Tipo de acomodação.
+        dtInicioVigencia:
           type: string
-          description: Só new
+          nullable: true
+          description: Início de vigência, em `yyyy-MM-dd HH:mm:ss`.
+        dtEntradaPrevista:
+          type: string
+          nullable: true
+          description: Data de entrada prevista, em `yyyy-MM-dd HH:mm:ss`.
+        nrSeqAutorizacao:
+          type: integer
+          nullable: true
+          description: Aceito pelo HIS, mas o Neoh não envia na geração da autorização.
+          x-enviado-pelo-neoh: false
         guias:
           type: array
+          description: Uma guia de internação e, fora de convênio particular, uma de procedimento.
           items:
             $ref: '#/components/schemas/GuiaConvenioItem'
     ProcedimentoAutorizadoItem:
@@ -3939,35 +4020,62 @@ components:
         qtdAutorizada:
           type: integer
           description: Só new
-    ProcedimentoAutorizadoRequest:
+    AnexoIntegracaoItem:
       type: object
       required:
+      - Extensao
+      - FileName
+      - Blob
+      properties:
+        TipoDocumento:
+          type: integer
+          nullable: true
+          description: Tipo de documento no HIS; default parametrizado por hospital.
+        Extensao:
+          type: string
+          description: Extensão do arquivo, com ponto.
+          example: .pdf
+        FileName:
+          type: string
+        Blob:
+          type: string
+          format: byte
+          description: Conteúdo do arquivo em base64.
+    ProcedimentoAutorizadoRequest:
+      type: object
+      description: >
+        Corpo dos procedimentos autorizados (objeto `AgendaPacienteProcedimentoAutorizado`),
+        conferido campo a campo contra o código e contra a planilha VACCF da rota. A agenda não
+        vai no corpo: cada item aponta para a guia pelo `nrSeqAutor` devolvido por
+        `/integrar-pedido/autorizacao-convenio`.
+      required:
       - idBupUnidade
-      - idAgenda
-      - loginUsuario
+      - idBupConvenio
+      - idBupPlano
+      - login
       - procedimentos
       properties:
-        idBupUnidade:
-          type: integer
-          description: Alias cdEstabelecimento
-        idAgenda:
-          type: integer
-        loginUsuario:
-          type: string
         nrSequenciaAutorizacao:
           type: integer
-          description: Usado em Execute, não validado
-        login:
+          format: int64
+          nullable: true
+          description: Sequencial da autorização no HIS, quando já conhecido.
+        idBupPlano:
           type: string
-          description: 'Fallback loginUsuario via ResolveLogin (PR #89)'
+          description: Código do plano no HIS.
         idBupConvenio:
           type: integer
-          description: Usado em Execute, não validado
-        idCategoriaConvenio:
+          format: int64
+          description: Código do convênio no HIS.
+        idBupUnidade:
           type: integer
-          description: Alias IdCategoriaConvenio; usado em Execute, não validado
+          description: Código corporativo da unidade.
+        login:
+          type: string
+          description: Login do usuário no HIS.
         procedimentos:
           type: array
+          description: Itens autorizados, incluindo a diária por acomodação quando parametrizada.
           items:
             $ref: '#/components/schemas/ProcedimentoAutorizadoItem'
     Especialidade:
