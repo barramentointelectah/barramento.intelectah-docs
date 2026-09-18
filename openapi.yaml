@@ -33,7 +33,7 @@ servers:
       - hml
       - prd
       default: hml
-      description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente.'
+      description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2.'
 tags:
 - name: Neoh→HIS · Autenticação
   description: Emissão do Bearer token do Barramento (credenciais em headers `client_id`/`client_secret`/`grant_type`).
@@ -2368,7 +2368,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2461,7 +2461,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2508,7 +2508,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2574,7 +2574,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2622,7 +2622,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2669,7 +2669,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2735,7 +2735,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2782,7 +2782,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
@@ -2838,7 +2838,7 @@ paths:
             - hml
             - prd
             default: hml
-            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. ATENÇÃO: a doc oficial de alguns callbacks usa hosts divergentes (neohapirededorhml, neohapihml sem sufixo -eastus2); confirmar o host canônico com a Intelectah por ambiente antes de publicar ao cliente (ver description de cada operação).'
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
       requestBody:
         required: true
         content:
