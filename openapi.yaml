@@ -891,7 +891,14 @@ paths:
       tags:
       - Neoh→HIS · Integrar Pedido
       operationId: integrarPedidoAgendaCirurgica
-      summary: Gera a vaga da agenda cirúrgica
+      summary: Integra o pedido inteiro num POST único (perfil MV)
+      description: >
+        Rota do **perfil MV**: quando o hospital tem `token_com_form_url_encoded` ligado, o Neoh
+        não usa as rotas item a item de `/integrar-pedido/*` — manda cabeçalho, procedimentos,
+        equipe, itens e exames de uma vez, neste corpo (objeto `IntegracaoPedido`, em PascalCase).
+
+
+        O parâmetro de URL é `barramento_external_rota_post_integrar_pedido`.
       security:
       - bearerAuth: []
       requestBody:
@@ -899,22 +906,22 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - idBupUnidade
-              - idAgenda
-              properties:
-                idBupUnidade:
-                  type: integer
-                idAgenda:
-                  type: integer
-                login:
-                  type: string
-                  default: NEOH
+              $ref: '#/components/schemas/IntegrarPedidoMvRequest'
             example:
-              idBupUnidade: 61
-              idAgenda: 3688948222
-              loginUsuario: NEOH
+              CdMultiEmpresa: 61
+              CdAvisoCirurgia: 3688948222
+              UsuarioHis: NEOH
+              NmPaciente: MARIA DA SILVA
+              DtInicioCirurgia: '2026-09-20 08:00:00'
+              Duracao: '90'
+              CaraterAtendimento: E
+              Procedimentos:
+              - CdCirurgia: 195152
+                Principal: 'S'
+                Quantidade: 1
+              Medicos:
+              - CdPrestador: 40095
+                Principal: 'S'
       responses:
         '200':
           description: Sucesso
@@ -1567,38 +1574,40 @@ paths:
           application/json:
             schema:
               type: object
+              description: >
+                Corpo da reserva de leito (objeto `ReservaLeito`), conferido campo a campo contra o
+                código. Esta rota não recebe unidade nem login: a agenda vai em `agenda`, e o médico
+                em `idBupMedico`.
               required:
-              - idBupUnidade
-              - idAgenda
-              - loginUsuario
+              - agenda
               - dataInternacao
               - leito
               - diasInternacao
-              - idBupProfissional
+              - idBupMedico
               properties:
-                idBupUnidade:
+                agenda:
                   type: integer
-                idAgenda:
-                  type: integer
-                loginUsuario:
-                  type: string
+                  format: int64
+                  description: Sequencial da agenda no HIS.
                 dataInternacao:
                   type: string
-                  format: date
+                  description: Data prevista de internação, em `yyyy-MM-dd HH:mm:ss`.
                 leito:
                   type: string
+                  description: Leito reservado.
                 diasInternacao:
                   type: integer
-                idBupProfissional:
+                  description: Dias de internação previstos.
+                idBupMedico:
                   type: integer
+                  format: int64
+                  description: Código do médico no HIS.
             example:
-              idBupUnidade: 61
-              idAgenda: 3688948222
-              loginUsuario: NEOH
-              dataInternacao: '2026-08-25'
+              agenda: 3688948222
+              dataInternacao: '2026-08-25 14:00:00'
               leito: 302A
               diasInternacao: 2
-              idBupProfissional: 40095
+              idBupMedico: 40095
       responses:
         '200':
           description: Sucesso
@@ -1835,28 +1844,33 @@ paths:
           application/json:
             schema:
               type: object
+              description: >
+                Corpo da geração de vaga (objeto `AgendaVagaCirurgica`), conferido campo a campo
+                contra o código. Não recebe unidade: a agenda vai em `agenda` e o login em `usuario`.
               required:
-              - idBupUnidade
-              - idAgenda
-              - loginUsuario
+              - agenda
+              - usuario
               - tipoVaga
+              - flagTransferencia
               properties:
-                idBupUnidade:
+                agenda:
                   type: integer
-                idAgenda:
-                  type: integer
-                loginUsuario:
-                  type: string
+                  format: int64
+                  description: Sequencial da agenda no HIS.
                 usuario:
                   type: string
-                  default: NEOH
+                  description: Login do usuário no HIS.
                 tipoVaga:
-                  type: string
+                  type: integer
+                  description: Tipo de gestão de vaga, parametrizado por hospital; 0 quando não há.
+                flagTransferencia:
+                  type: boolean
+                  description: "`true` quando a vaga vem de uma transferência de agendamento."
             example:
-              idBupUnidade: 61
-              idAgenda: 3688948222
-              loginUsuario: NEOH
-              tipoVaga: '1'
+              agenda: 3688948222
+              usuario: NEOH
+              tipoVaga: 1
+              flagTransferencia: false
       responses:
         '200':
           description: Sucesso
@@ -3424,6 +3438,367 @@ components:
       description: Resposta padrão dos callbacks HIS→Neoh (sucesso e 400 individual).
       properties:
         Message:
+          type: string
+    IntegrarPedidoMvRequest:
+      type: object
+      description: >
+        Pedido cirúrgico inteiro, num POST único. É o corpo do perfil MV (parâmetro
+        `token_com_form_url_encoded` ligado): em vez das rotas item a item de
+        `/integrar-pedido/*`, o Neoh envia cabeçalho e listas numa só requisição.
+        Gerado a partir do objeto `IntegracaoPedido` e conferido campo a campo contra o código.
+      properties:
+        CdMultiEmpresa:
+          type: integer
+        TpSituacao:
+          type: string
+        CdPaciente:
+          type: integer
+          nullable: true
+        NmPaciente:
+          type: string
+        TpIdade:
+          type: string
+        Sexo:
+          type: string
+        IdSala:
+          type: integer
+          nullable: true
+        IdBloco:
+          type: integer
+          nullable: true
+        UsuarioHis:
+          type: string
+        Telefone:
+          type: string
+        DataPrevistaInternacao:
+          type: string
+        CdTipoInternacao:
+          type: integer
+          nullable: true
+        DataPrevistaAlta:
+          type: string
+        CaraterAtendimento:
+          type: string
+        Duracao:
+          type: string
+        IdCid:
+          type: string
+        Peso:
+          type: number
+          nullable: true
+        Idade:
+          type: integer
+          nullable: true
+        Uti:
+          type: string
+        Tecnica:
+          type: string
+        Robotica:
+          type: string
+        TpNatureza:
+          type: string
+        ObservacoesExtras:
+          type: string
+        CodAtendimento:
+          type: integer
+          nullable: true
+        NrCarteira:
+          type: string
+        Ambulatorial:
+          type: string
+        CdUnidadeUti:
+          type: integer
+          nullable: true
+        DtInclusao:
+          type: string
+        Sangue:
+          type: string
+        Congelacao:
+          type: string
+        DtInicioCirurgia:
+          type: string
+        DtFimCirurgia:
+          type: string
+        TempoPreparo:
+          type: string
+        CdEquipeMedica:
+          type: integer
+          nullable: true
+        CdTipoAnestesia:
+          type: string
+        CdConvenio:
+          type: integer
+          format: int64
+          nullable: true
+        CdPlano:
+          type: integer
+          nullable: true
+        TpAgendamento:
+          type: string
+        CdFornecedor:
+          type: integer
+          format: int64
+          nullable: true
+        Procedimentos:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvProcedimento'
+        Medicos:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvMedico'
+        Anestesistas:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvAnestesista'
+        Sangues:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvSangueMV'
+        Caixas:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvCaixa'
+        ExamesImagem:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvExameImagem'
+        ExamesLaboratorio:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvExameLaboratorio'
+        KitsCirurgicos:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvKitCirurgico'
+        Equipamentos:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvEquipamento'
+        Opmes:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvOpme'
+        Materiais:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PedidoMvMaterial'
+    PedidoMvProcedimento:
+      type: object
+      description: >
+        Procedimento do pedido.
+      properties:
+        CdCirurgia:
+          type: integer
+          nullable: true
+        principal:
+          type: string
+        CdConvenio:
+          type: integer
+          format: int64
+          nullable: true
+        CdPlano:
+          type: integer
+          nullable: true
+        DsPlano:
+          type: string
+        CdViaAcesso:
+          type: integer
+          nullable: true
+        CdEspecialidade:
+          type: integer
+          nullable: true
+        CdTipoAcomodacao:
+          type: integer
+          nullable: true
+        PpPorte:
+          type: string
+        TpNatureza:
+          type: string
+        ObservacoesExtras:
+          type: string
+        Lateralidade:
+          type: string
+        Quantidade:
+          type: integer
+    PedidoMvMedico:
+      type: object
+      description: >
+        Médico da equipe.
+      properties:
+        CdCirurgia:
+          type: integer
+          nullable: true
+        CdAtividade:
+          type: string
+        Principal:
+          type: string
+        CdPrestador:
+          type: integer
+          nullable: true
+        NmPrestador:
+          type: string
+    PedidoMvAnestesista:
+      type: object
+      description: >
+        Anestesista do pedido.
+      properties:
+        CdCirurgia:
+          type: integer
+          nullable: true
+        CdAtividade:
+          type: string
+        Principal:
+          type: string
+        CdPrestador:
+          type: integer
+          format: int64
+        NmPrestador:
+          type: string
+    PedidoMvSangueMV:
+      type: object
+      description: >
+        Hemoderivado reservado.
+      properties:
+        CdSangue:
+          type: integer
+          nullable: true
+        QtdSangue:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+    PedidoMvCaixa:
+      type: object
+      description: >
+        Caixa cirúrgica.
+      properties:
+        CdCaixa:
+          type: integer
+          nullable: true
+        QtdCaixa:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+    PedidoMvExameImagem:
+      type: object
+      description: >
+        Exame de imagem.
+      properties:
+        CdExameServico:
+          type: integer
+          nullable: true
+        QtdExameServico:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+        CdSetorExameServico:
+          type: integer
+          nullable: true
+    PedidoMvExameLaboratorio:
+      type: object
+      description: >
+        Exame de laboratório.
+      properties:
+        CdExameServico:
+          type: integer
+          nullable: true
+        QtdExameServico:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+        CdSetorExameServico:
+          type: integer
+          nullable: true
+    PedidoMvKitCirurgico:
+      type: object
+      description: >
+        Kit cirúrgico.
+      properties:
+        CdKitCirurgico:
+          type: integer
+          nullable: true
+        QtdKitCirurgico:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+    PedidoMvEquipamento:
+      type: object
+      description: >
+        Equipamento.
+      properties:
+        CdEquipamento:
+          type: integer
+          nullable: true
+        QtdEquipamento:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+    PedidoMvOpme:
+      type: object
+      description: >
+        OPME.
+      properties:
+        CdOpme:
+          type: integer
+          nullable: true
+        QtdOpme:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+        CdEstoque:
+          type: integer
+          nullable: true
+        CdFornecedor:
+          type: integer
+          format: int64
+          nullable: true
+        DsObservacao:
+          type: string
+        DsOpme:
+          type: string
+    PedidoMvMaterial:
+      type: object
+      description: >
+        Material.
+      properties:
+        CdMaterial:
+          type: integer
+          nullable: true
+        QtdMaterial:
+          type: integer
+          nullable: true
+        cdCirurgiaPrincipal:
+          type: integer
+          nullable: true
+        CdEstoque:
+          type: integer
+          nullable: true
+        DsMaterial:
           type: string
     CancelamentoAgendaRequest:
       type: object
