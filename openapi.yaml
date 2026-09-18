@@ -2269,60 +2269,39 @@ paths:
       tags:
       - Neoh→HIS · Edição de Pedido
       operationId: integrarAnexo
-      summary: Envia anexos da agenda (um por requisição)
+      summary: Anexo por caminho de arquivo (inclusão e remoção)
       description: >
-        Rota de anexos do barramento, resolvida pelo parâmetro `barramento_rota_integrar_anexos`.
-        O Neoh envia **um anexo por requisição**, com o arquivo embutido em base64.
+        Fluxo de anexo por **caminho de arquivo**: o Neoh manda a URL do arquivo, não o binário.
+        É o caminho usado quando o hospital **não** tem `barramento_rota_integrar_anexos`
+        configurado — com esse parâmetro, o anexo vai pela rota `/integrar-anexo-blob`, com o
+        arquivo em Base64.
 
 
-        Quando o hospital não tem esse parâmetro configurado, o Neoh cai na rota legada de anexos
-        do HIS, que recebe um corpo diferente (`action` + `filePath`/`observacao` para inclusão,
-        `nrSequenciaAgenda`/`nrSequenciaAutorizacao` para remoção). Essa rota legada não é
-        publicada aqui — quem for implementar o barramento deve expor a rota desta página.
-      security:
-      - bearerAuth: []
+        No código a inclusão e a remoção resolvem parâmetros de URL diferentes
+        (`barramento_url_inclusao_anexo` e `barramento_url_remocao_anexo`) e usam um token próprio
+        de anexo (`barramento_url_token_anexo`), não o Bearer das demais rotas. O corpo é o mesmo
+        objeto, distinguido pelo campo `action`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - CdAvisoCirurgia
-              - CdMultiEmpresa
-              - UsuarioHis
-              - Anexos
-              properties:
-                CdAvisoCirurgia:
-                  type: string
-                  description: Código do aviso cirúrgico no HIS.
-                CdMultiEmpresa:
-                  type: integer
-                  description: Código corporativo da unidade.
-                UsuarioHis:
-                  type: string
-                  description: Login do usuário no HIS, sempre em maiúsculas.
-                NomePaciente:
-                  type: string
-                  nullable: true
-                Anexos:
-                  type: array
-                  description: Lista com um anexo — o Neoh faz uma requisição por arquivo.
-                  items:
-                    $ref: '#/components/schemas/AnexoIntegracaoItem'
+              oneOf:
+              - $ref: '#/components/schemas/AnexoInclusaoRequest'
+              - $ref: '#/components/schemas/AnexoRemocaoRequest'
             example:
-              CdAvisoCirurgia: '3688948222'
-              CdMultiEmpresa: 61
-              UsuarioHis: NEOH
-              NomePaciente: MARIA DA SILVA
-              Anexos:
-              - TipoDocumento: 1
-                Extensao: .pdf
-                FileName: exame-pre-operatorio.pdf
-                Blob: JVBERi0xLjQKJc...
+              action: new
+              login: NEOH
+              idBUPUnidade: 61
+              idAgenda: 3688948222
+              tipoAnexo: 1
+              filePath: https://exemplo.com/arquivos/exame-pre-operatorio.pdf
+              observacao: Exame pré-operatório
       responses:
         '200':
-          description: Delete → {status}
+          description: >
+            Inclusão devolve os sequenciais criados no HIS; o Neoh lê `nrSequenciaAgenda` e
+            `nrSequenciaAutorizacao` e os guarda para a remoção.
           content:
             application/json:
               schema:
@@ -2330,14 +2309,68 @@ paths:
                 properties:
                   status:
                     type: integer
+                    description: Status da operação.
                   nrSequenciaAgenda:
                     type: integer
-                    description: ''
+                    format: int64
+                    nullable: true
+                    description: Sequencial do arquivo na agenda. Obrigatório quando `action = new`.
                   nrSequenciaAutorizacao:
+                    type: integer
+                    format: int64
+                    nullable: true
+                    description: Sequencial do arquivo na autorização. Obrigatório quando `action = new`.
+                  message:
                     type: string
-                    description: ''
+                    nullable: true
+                    description: Descrição do erro, quando houver.
         '400':
-          description: Campo obrigatório ausente (conforme action)
+          description: Campo obrigatório ausente (conforme a action)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
+  /integrar-anexo-blob:
+    post:
+      tags:
+      - Neoh→HIS · Edição de Pedido
+      operationId: integrarAnexoBlob
+      summary: Anexo com o arquivo em Base64 (uma requisição por arquivo)
+      description: >
+        Fluxo de anexo com o **binário embutido em Base64**, resolvido pelo parâmetro
+        `barramento_rota_integrar_anexos`. Quando esse parâmetro está configurado, é este o caminho
+        usado; sem ele, o Neoh cai no fluxo por caminho de arquivo (`/integrar-anexo`).
+
+
+        O Neoh envia **uma requisição por arquivo** — o array `Anexos` sempre chega com um item — e
+        só envia anexo com binário. O corpo cresce cerca de 33% sobre o tamanho do arquivo, então
+        vale alinhar o limite de tamanho de requisição no HIS. Este fluxo cobre apenas a inclusão;
+        a remoção é feita pelo `/integrar-anexo`, com `action: delete`.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnexoBlobRequest'
+            example:
+              CdAvisoCirurgia: '3688948222'
+              CdMultiEmpresa: 61
+              UsuarioHis: NEOH
+              NomePaciente: MARIA DA SILVA
+              Anexos:
+              - TipoDocumento: 1
+                Extensao: pdf
+                FileName: exame-pre-operatorio.pdf
+                Blob: JVBERi0xLjQKJc...
+      responses:
+        '200':
+          description: >
+            Anexo recebido. O Neoh não desserializa o corpo desta resposta — avalia só o status
+            HTTP —, mas recomenda-se devolver o identificador do anexo criado, para rastreabilidade.
+        '400':
+          description: Falha na inclusão do anexo (aviso inexistente, tipo inválido, Base64 malformado)
           content:
             application/json:
               schema:
@@ -4449,7 +4482,35 @@ components:
         qtdAutorizada:
           type: integer
           description: Só new
-    AnexoIntegracaoItem:
+    AnexoBlobRequest:
+      type: object
+      description: >
+        Corpo do anexo em Base64 (objeto `IntegracaoAnexo`), conferido campo a campo contra o
+        código e contra o documento `Integrar Anexo (Blob Base64)` da OFICIAL.
+      required:
+      - CdAvisoCirurgia
+      - CdMultiEmpresa
+      - UsuarioHis
+      - Anexos
+      properties:
+        CdAvisoCirurgia:
+          type: string
+          description: Código do aviso cirúrgico no HIS.
+        CdMultiEmpresa:
+          type: integer
+          description: Código corporativo da unidade.
+        UsuarioHis:
+          type: string
+          description: Login do usuário no HIS, sempre em maiúsculas.
+        NomePaciente:
+          type: string
+          nullable: true
+        Anexos:
+          type: array
+          description: Sempre com um item — o Neoh faz uma requisição por arquivo.
+          items:
+            $ref: '#/components/schemas/AnexoBlobItem'
+    AnexoBlobItem:
       type: object
       required:
       - Extensao
@@ -4459,17 +4520,87 @@ components:
         TipoDocumento:
           type: integer
           nullable: true
-          description: Tipo de documento no HIS; default parametrizado por hospital.
+          description: >
+            Tipo de documento no HIS. Sem código próprio no anexo, vai o padrão do hospital
+            (`tipo_doc_padrao_hospital`).
         Extensao:
           type: string
-          description: Extensão do arquivo, com ponto.
-          example: .pdf
+          description: Extensão do arquivo.
+          example: pdf
         FileName:
           type: string
         Blob:
           type: string
           format: byte
-          description: Conteúdo do arquivo em base64.
+          description: Conteúdo do arquivo em Base64.
+    AnexoInclusaoRequest:
+      type: object
+      description: >
+        Inclusão de anexo por caminho de arquivo (objeto `AnexoBarramento`). Resolve o parâmetro
+        `barramento_url_inclusao_anexo`.
+      required:
+      - action
+      - login
+      - idBUPUnidade
+      - idAgenda
+      - filePath
+      properties:
+        action:
+          type: string
+          enum: [new]
+          description: Sempre `new` na inclusão.
+        login:
+          type: string
+          description: Login do usuário no HIS.
+        idBUPUnidade:
+          type: integer
+          description: Código corporativo da unidade.
+        idAgenda:
+          type: integer
+          format: int64
+          description: Sequencial da agenda no HIS.
+        tipoAnexo:
+          type: integer
+          description: Tipo do arquivo anexado. O Neoh envia 1 por padrão.
+        filePath:
+          type: string
+          description: URL do arquivo a anexar.
+        observacao:
+          type: string
+          nullable: true
+          description: Observação do arquivo.
+    AnexoRemocaoRequest:
+      type: object
+      description: >
+        Remoção de anexo (objeto `AnexoBarramentoRemocao`). Resolve o parâmetro
+        `barramento_url_remocao_anexo`, também por POST.
+      required:
+      - action
+      - login
+      - idBUPUnidade
+      - idAgenda
+      - nrSequenciaAgenda
+      properties:
+        action:
+          type: string
+          enum: [delete]
+          description: Sempre `delete` na remoção.
+        login:
+          type: string
+        idBUPUnidade:
+          type: integer
+        idAgenda:
+          type: integer
+          format: int64
+        tipoAnexo:
+          type: integer
+        nrSequenciaAgenda:
+          type: string
+          description: Sequencial do arquivo na agenda, devolvido na inclusão.
+        nrSequenciaAutorizacao:
+          type: string
+          nullable: true
+          description: Sequencial do arquivo na autorização, devolvido na inclusão.
     ProcedimentoAutorizadoRequest:
       type: object
       description: >

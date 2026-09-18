@@ -91,7 +91,7 @@
   na referência de API. A situação diz se a operação já está no ar, se é proposta ainda sem implementação,
   ou se está documentada e ainda não publicada. Clique no endpoint para abrir direto no ponto certo da referência.</p>
 
-  <p class="aviso"><b>Conferência contra o código-fonte.</b> As 51 operações publicadas foram confrontadas com a implementação do Neoh: 37 tiveram os campos comparados um a um com o objeto que o código monta, 3 tiveram rota e verbo conferidos, 0 apontaram divergência de campo e 11 não têm implementação localizada. A verificação é automática e refaz-se a cada publicação — última em 18/09/2026, sobre o branch <code>master</code> no commit <code>f09293916a</code>.</p>
+  <p class="aviso"><b>Conferência contra o código-fonte.</b> As 52 operações publicadas foram confrontadas com a implementação do Neoh: 38 tiveram os campos comparados um a um com o objeto que o código monta, 3 tiveram rota e verbo conferidos, 0 apontaram divergência de campo e 11 não têm implementação localizada. A verificação é automática e refaz-se a cada publicação — última em 18/09/2026, sobre o branch <code>master</code> no commit <code>f09293916a</code>.</p>
 
   <div class="barra">
     <input id="busca" type="search" placeholder="Buscar por documento, rota, campo ou descrição…" autocomplete="off">
@@ -177,7 +177,7 @@
   </section>
 
   <section>
-    <h2>Neoh→HIS · Edição de Pedido <span style="font-weight:400;color:#8b95ab">· 7</span></h2>
+    <h2>Neoh→HIS · Edição de Pedido <span style="font-weight:400;color:#8b95ab">· 8</span></h2>
     <table>
       <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
       <tbody>
@@ -187,7 +187,8 @@
         <tr data-sit="publicado" data-conf="campos"><td class="doc">Novo Integrar Pedido :: <code>status-autorizacao</code></td><td class="portal"><a href="index.html#operation/statusAutorizacao"><code>POST /status-autorizacao</code></a><span class="resumo">Atualiza estágio/fase de uma autorização + histórico</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">6 campos conferidos</span></td><td class="par"><code>barramento_post_cancelar_autorizacao_convenio</code></td></tr>
         <tr data-sit="publicado" data-conf="campos"><td class="doc">Troca de fase (estágio) :: <code>AtualizarAutorizacaoPelaAgendaC</code></td><td class="portal"><a href="index.html#operation/trocaFase"><code>POST /troca-fase</code></a> <span class="perfil">token</span><span class="resumo">Troca a fase da agenda (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">4 campos conferidos</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
         <tr data-sit="publicado" data-conf="campos"><td class="doc">Troca de fase (estágio) :: <code>AtualizarAutorizacaoPelaAgendaC</code></td><td class="portal"><a href="index.html#operation/trocaFaseMdm"><code>PUT /troca-fase</code></a> <span class="perfil">mdm</span><span class="resumo">Troca fase da autorização e/ou status da agenda (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">7 campos conferidos</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
-        <tr data-sit="publicado" data-conf="campos"><td class="doc">Integrar Anexo :: <code>integrar-anexo</code></td><td class="portal"><a href="index.html#operation/integrarAnexo"><code>POST /integrar-anexo</code></a><span class="resumo">Envia anexos da agenda (um por requisição)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">5 campos conferidos</span></td><td class="par"><code>barramento_rota_integrar_anexos</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos"><td class="doc">Integrar Anexo :: <code>(VACCF) integrar-anexo</code></td><td class="portal"><a href="index.html#operation/integrarAnexo"><code>POST /integrar-anexo</code></a><span class="resumo">Anexo por caminho de arquivo (inclusão e remoção)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">9 campos conferidos</span></td><td class="par"><code>barramento_url_inclusao_anexo</code><br><code>barramento_url_remocao_anexo</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos"><td class="doc">Integrar Anexo :: <code>Integrar Anexo (Blob Base64).md</code></td><td class="portal"><a href="index.html#operation/integrarAnexoBlob"><code>POST /integrar-anexo-blob</code></a><span class="resumo">Anexo com o arquivo em Base64 (uma requisição por arquivo)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">5 campos conferidos</span></td><td class="par"><code>barramento_rota_integrar_anexos</code></td></tr>
       </tbody>
     </table>
   </section>
@@ -266,7 +267,7 @@
     precisa expor para aquela operação. Não existe URL fixa: cada hospital aponta a sua. O valor é lido direto
     das constantes do código na mesma conferência.
   </div>
-  <footer>Gerado a partir de <code>DE-PARA-Portal-x-Codigo.md</code> e <code>openapi.yaml</code> em 18/09/2026 · 51 operações publicadas na referência · conferência sobre o código em 18/09/2026.</footer>
+  <footer>Gerado a partir de <code>DE-PARA-Portal-x-Codigo.md</code> e <code>openapi.yaml</code> em 18/09/2026 · 52 operações publicadas na referência · conferência sobre o código em 18/09/2026.</footer>
 </main>
 <script>
 (function(){
