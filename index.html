@@ -6,19 +6,28 @@
   <title>Barramento de Integração — Neoh × HIS</title>
   <style>
     html,body{margin:0;padding:0}
-    #topbar{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0e1b3a;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1000;box-shadow:0 1px 0 rgba(255,255,255,.08)}
+    #topbar{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0e1b3a;color:#fff;padding:10px 18px 0;position:sticky;top:0;z-index:1000;box-shadow:0 1px 0 rgba(255,255,255,.08)}
+    #topbar .linha1{display:flex;align-items:center;gap:12px}
     #topbar .brand{font-weight:700;font-size:14px}
-    #topbar .tag{font-size:11px;background:#1e3a74;border:1px solid #2f4f8f;border-radius:999px;padding:2px 9px;color:#cfe0ff}
     #topbar .sp{flex:1}
+    #topbar .meta{font-size:11px;color:#9bb4e6}
+    #abas{display:flex;gap:4px;margin-top:9px}
+    #abas a{display:block;padding:7px 15px;font-size:13px;color:#b9cbef;text-decoration:none;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none}
+    #abas a:hover{color:#fff;background:rgba(255,255,255,.07)}
+    #abas a[aria-current="page"]{background:#fff;color:#0e1b3a;font-weight:600}
   </style>
 </head>
 <body>
   <div id="topbar">
-    <span class="brand">Barramento de Integração · Neoh × HIS</span>
-    <span class="tag">Neoh → HIS</span>
-    <span class="tag">HIS → Neoh</span>
-    <span class="sp"></span>
-    <span style="font-size:11px;color:#9bb4e6">Referência de API · OpenAPI 3.0</span>
+    <div class="linha1">
+      <span class="brand">Barramento de Integração · Neoh × HIS</span>
+      <span class="sp"></span>
+      <span class="meta">Referência de API · OpenAPI 3.0</span>
+    </div>
+    <nav id="abas">
+      <a href="index.html" aria-current="page">Referência de API</a>
+      <a href="de-para.html">De-para · Documentação × Portal</a>
+    </nav>
   </div>
   <redoc spec-url="openapi.yaml"
          theme='{"colors":{"primary":{"main":"#2b57d6"}},"rightPanel":{"backgroundColor":"#0e1b3a"},"typography":{"fontFamily":"-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif","headings":{"fontWeight":"600"}}}'

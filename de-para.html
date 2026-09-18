@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De-para · Documentação × Portal — Barramento Neoh × HIS</title>
+<style>
+  :root{
+    --azul:#0e1b3a; --azul2:#1e3a74; --borda:#2f4f8f; --primaria:#2b57d6;
+    --texto:#1c2436; --suave:#5b6780; --linha:#e4e8f0; --fundo:#fff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--texto);background:var(--fundo)}
+  #topbar{background:var(--azul);color:#fff;padding:10px 18px 0;position:sticky;top:0;z-index:1000;box-shadow:0 1px 0 rgba(255,255,255,.08)}
+  #topbar .linha1{display:flex;align-items:center;gap:12px}
+  #topbar .brand{font-weight:700;font-size:14px}
+  #topbar .sp{flex:1}
+  #topbar .meta{font-size:11px;color:#9bb4e6}
+  #abas{display:flex;gap:4px;margin-top:9px}
+  #abas a{display:block;padding:7px 15px;font-size:13px;color:#b9cbef;text-decoration:none;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none}
+  #abas a:hover{color:#fff;background:rgba(255,255,255,.07)}
+  #abas a[aria-current="page"]{background:#fff;color:var(--azul);font-weight:600}
+  main{max-width:1180px;margin:0 auto;padding:26px 22px 80px}
+  h1{font-size:23px;margin:0 0 6px;font-weight:600}
+  .sub{color:var(--suave);font-size:14px;line-height:1.6;margin:0 0 20px;max-width:78ch}
+  .barra{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:6px;position:sticky;top:83px;background:var(--fundo);padding:12px 0;z-index:900;border-bottom:1px solid var(--linha)}
+  #busca{flex:1;min-width:230px;padding:9px 12px;font-size:14px;border:1px solid #cfd6e4;border-radius:7px;font-family:inherit}
+  #busca:focus{outline:none;border-color:var(--primaria);box-shadow:0 0 0 3px rgba(43,87,214,.13)}
+  .chip{border:1px solid #cfd6e4;background:#fff;color:var(--suave);font-size:12.5px;padding:6px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
+  .chip:hover{border-color:var(--primaria);color:var(--primaria)}
+  .chip[aria-pressed="true"]{background:var(--primaria);border-color:var(--primaria);color:#fff}
+  #contagem{font-size:12.5px;color:var(--suave);margin:10px 0 18px}
+  h2{font-size:15px;margin:30px 0 10px;font-weight:600;color:var(--azul);letter-spacing:.2px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{text-align:left;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--suave);border-bottom:1px solid var(--linha);padding:7px 10px}
+  tbody td{border-bottom:1px solid var(--linha);padding:10px;vertical-align:top;line-height:1.5}
+  tbody tr:hover{background:#f7f9fd}
+  td.doc{width:40%;color:#33405c}
+  td.portal{width:42%}
+  td.sit{width:18%;white-space:nowrap}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f5fa;border:1px solid #e2e8f3;border-radius:4px;padding:1px 5px}
+  td.portal a{color:var(--primaria);text-decoration:none}
+  td.portal a:hover{text-decoration:underline}
+  td.portal .resumo{display:block;color:var(--suave);font-size:12.5px;margin-top:3px}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid}
+  .publicado{background:#e9f6ee;color:#1d6f3c;border-color:#bfe3cd}
+  .proposta{background:#fff5e4;color:#8a5a08;border-color:#f3dcb2}
+  .naolocalizado{background:#fdecec;color:#973030;border-color:#f3c9c9}
+  .naopublicado{background:#eef0f6;color:#4d5872;border-color:#d8dde9}
+  .perfil{display:inline-block;font-size:10.5px;margin-left:6px;padding:2px 7px;border-radius:999px;background:#eef2fb;color:#3a4a76;border:1px solid #dbe3f5;text-transform:uppercase;letter-spacing:.4px}
+  .vazio{display:none;color:var(--suave);font-size:14px;padding:30px 0}
+  .legenda{margin-top:40px;padding-top:18px;border-top:1px solid var(--linha);font-size:12.5px;color:var(--suave);line-height:1.8}
+  .legenda .tag{margin-right:6px}
+  footer{margin-top:26px;font-size:12px;color:#8b95ab}
+  @media (max-width:760px){td.doc,td.portal,td.sit{width:auto}.barra{position:static}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div class="linha1">
+    <span class="brand">Barramento de Integração · Neoh × HIS</span>
+    <span class="sp"></span>
+    <span class="meta">Referência de API · OpenAPI 3.0 · v1.0</span>
+  </div>
+  <nav id="abas">
+    <a href="index.html">Referência de API</a>
+    <a href="de-para.html" aria-current="page">De-para · Documentação × Portal</a>
+  </nav>
+</div>
+<main>
+  <h1>De-para: documentação × portal</h1>
+  <p class="sub">Uma linha por operação, ligando o documento de especificação ao endpoint como ele sai publicado
+  na referência de API. A situação diz se a operação já está no ar, se é proposta ainda sem implementação,
+  ou se está documentada e ainda não publicada. Clique no endpoint para abrir direto no ponto certo da referência.</p>
+
+  <div class="barra">
+    <input id="busca" type="search" placeholder="Buscar por documento, rota ou descrição…" autocomplete="off">
+    <button class="chip" data-f="todos" aria-pressed="true">Todos</button>
+    <button class="chip" data-f="publicado" aria-pressed="false">Publicado</button>
+    <button class="chip" data-f="proposta" aria-pressed="false">Proposta</button>
+    <button class="chip" data-f="naolocalizado" aria-pressed="false">Não localizado</button>
+    <button class="chip" data-f="naopublicado" aria-pressed="false">Não publicado</button>
+  </div>
+  <div id="contagem"></div>
+
+  <section>
+    <h2>Neoh→HIS · Autenticação <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Token :: <code>Token</code> (request + response)</td><td class="portal"><a href="index.html#operation/emitirToken"><code>POST /token</code></a><span class="resumo">Emite o Bearer token (client_credentials)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Paciente &amp; Cadastro <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Consultar Paciente :: <code>Consultar</code>, <code>Consultar pelo Nr atendimento</code></td><td class="portal"><a href="index.html#operation/consultarPaciente"><code>GET /consultar-paciente</code></a><span class="resumo">Localiza o paciente no HIS (2 modos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Cadastro Simplificado de Paciente :: <code>Novo Paciente</code></td><td class="portal"><a href="index.html#operation/cadastroSimplificado"><code>POST /cadastro-simplificado</code></a><span class="resumo">Cria paciente mínimo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Cadastro Completo de Paciente :: <code>Novo Paciente</code></td><td class="portal"><a href="index.html#operation/cadastroCompleto"><code>POST /cadastro-completo</code></a><span class="resumo">Cria paciente completo (+)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Agenda &amp; Mapa <span style="font-weight:400;color:#8b95ab">· 7</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Agenda Disponivel (novo) :: <code>consultar-agenda-disponivel</code></td><td class="portal"><a href="index.html#operation/agendaDisponivel"><code>GET /agenda-disponivel</code></a><span class="resumo">IDs de agenda disponíveis para uma sala/data</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Gerar Horário Livre (novo) :: <code>consultar-agenda-disponivel</code></td><td class="portal"><a href="index.html#operation/gerarHorarioLivre"><code>GET /gerar-horario-livre</code></a><span class="resumo">Gera vagas livres (fire-and-forget)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-agenda</code></td><td class="portal"><a href="index.html#operation/atualizarAgendaPaciente"><code>POST /agenda-paciente</code></a><span class="resumo">Atualiza a cabeça da agenda cirúrgica do paciente</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Transferir e Cancelar Pedido :: <code>ProcCancelarAgendaPaciente</code></td><td class="portal"><a href="index.html#operation/cancelarAgenda"><code>POST /cancelar</code></a> <span class="perfil">token</span><span class="resumo">Cancela agendamento cirúrgico (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Transferir e Cancelar Pedido :: <code>ProcCancelarAgendaPaciente</code></td><td class="portal"><a href="index.html#operation/cancelarAgendaMdm"><code>DELETE /cancelar</code></a> <span class="perfil">mdm</span><span class="resumo">Cancela agendamento cirúrgico (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Consultar Mapa Cirurgico :: <code>Consultar mapa cirurgico</code></td><td class="portal"><a href="index.html#operation/mapaCirurgico"><code>GET /mapa-cirurgico</code></a><span class="resumo">Mapa de horários e equipamentos de um bloco</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>busca-agenda</code></td><td class="portal"><a href="index.html#operation/buscaAgenda"><code>POST /busca-agenda</code></a><span class="resumo">Busca agenda por unidade/sequência/status (legada)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Integrar Pedido <span style="font-weight:400;color:#8b95ab">· 15</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-agenda</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaAgenda"><code>POST /integrar-pedido/cirurgia-agenda</code></a><span class="resumo">Atualiza a linha principal do pedido cirúrgico</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>agenda-cirurgica</code></td><td class="portal"><a href="index.html#operation/integrarPedidoAgendaCirurgica"><code>POST /integrar-pedido/agenda-cirurgica</code></a><span class="resumo">Gera a vaga da agenda cirúrgica</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-equipamento</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaEquipamento"><code>POST /integrar-pedido/cirurgia-equipamento</code></a><span class="resumo">Itens de equipamento (insumos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-exame</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaExame"><code>POST /integrar-pedido/cirurgia-exame</code></a><span class="resumo">Itens de exame pré-cirúrgico</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-material</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaMaterial"><code>POST /integrar-pedido/cirurgia-material</code></a><span class="resumo">Itens de material (insumos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-OPME</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaOpme"><code>POST /integrar-pedido/cirurgia-opme</code></a><span class="resumo">Itens de OPME (insumos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="proposta"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-medicamento</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaMedicamento"><code>POST /integrar-pedido/cirurgia-medicamento</code></a><span class="resumo">Itens de medicamento (insumos)</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-procedimento</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaProcedimento"><code>POST /integrar-pedido/cirurgia-procedimento</code></a><span class="resumo">Itens de procedimento do pedido</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-sangue</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaSangue"><code>POST /integrar-pedido/cirurgia-sangue</code></a><span class="resumo">Itens de sangue/hemoderivados</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-caixas</code></td><td class="portal"><a href="index.html#operation/integrarPedidoCirurgiaCaixas"><code>POST /integrar-pedido/cirurgia-caixas</code></a><span class="resumo">Itens de caixa cirúrgica</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>reserva-leito</code></td><td class="portal"><a href="index.html#operation/integrarPedidoReservaLeito"><code>POST /integrar-pedido/reserva-leito</code></a><span class="resumo">Reserva de leito do pedido</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Autorização Convênio e Proc. Autorizado (sem VACCF) :: <code>autorizacao-convenio</code></td><td class="portal"><a href="index.html#operation/integrarPedidoAutorizacaoConvenio"><code>POST /integrar-pedido/autorizacao-convenio</code></a><span class="resumo">Guias de autorização de convênio</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Autorização Convênio e Proc. Autorizado :: <code>procedimento-autorizado</code></td><td class="portal"><a href="index.html#operation/integrarPedidoProcedimentoAutorizado"><code>POST /integrar-pedido/procedimento-autorizado</code></a><span class="resumo">Procedimentos autorizados (itens da guia)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>agenda-historico</code></td><td class="portal"><a href="index.html#operation/integrarPedidoAgendaHistorico"><code>POST /integrar-pedido/agenda-historico</code></a><span class="resumo">Registra histórico da agenda</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>vaga-cirurgica</code></td><td class="portal"><a href="index.html#operation/integrarPedidoVagaCirurgica"><code>POST /integrar-pedido/vaga-cirurgica</code></a><span class="resumo">Gera vaga por tipo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Edição de Pedido <span style="font-weight:400;color:#8b95ab">· 7</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="proposta"><td class="doc">Novo Integrar Pedido :: <code>cirurgia-checkpoint</code></td><td class="portal"><a href="index.html#operation/cirurgiaCheckpoint"><code>POST /cirurgia-checkpoint</code></a><span class="resumo">Insere avaliação/checkpoint da cirurgia</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="naolocalizado"><td class="doc">— sem fonte</td><td class="portal"><a href="index.html#operation/verificarDisponibilidade"><code>POST /verificar-disponibilidade</code></a><span class="resumo">Verifica slot livre de sala em data/hora</span></td><td class="sit"><span class="tag naolocalizado">Não localizado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>dados-opme</code></td><td class="portal"><a href="index.html#operation/dadosOpme"><code>GET /dados-opme</code></a><span class="resumo">Lista OPMEs lançados numa agenda</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Novo Integrar Pedido :: <code>status-autorizacao</code></td><td class="portal"><a href="index.html#operation/statusAutorizacao"><code>POST /status-autorizacao</code></a><span class="resumo">Atualiza estágio/fase de uma autorização + histórico</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Troca de fase (estágio) :: <code>AtualizarAutorizacaoPelaAgendaC</code></td><td class="portal"><a href="index.html#operation/trocaFase"><code>POST /troca-fase</code></a> <span class="perfil">token</span><span class="resumo">Troca a fase da agenda (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Troca de fase (estágio) :: <code>AtualizarAutorizacaoPelaAgendaC</code></td><td class="portal"><a href="index.html#operation/trocaFaseMdm"><code>PUT /troca-fase</code></a> <span class="perfil">mdm</span><span class="resumo">Troca fase da autorização e/ou status da agenda (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Integrar Anexo :: <code>integrar-anexo</code></td><td class="portal"><a href="index.html#operation/integrarAnexo"><code>POST /integrar-anexo</code></a><span class="resumo">Insere ou remove (soft-delete) anexo da agenda</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Dados de Referência <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Dados de Referencia (Complemento) :: 19 abas</td><td class="portal"><a href="index.html#operation/dadosReferencia"><code>GET /dados-referencia</code></a><span class="resumo">Tabelas de referência (19 entidades)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Neoh→HIS · Portal do Médico &amp; Painel (novas APIs) <span style="font-weight:400;color:#8b95ab">· 5</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="proposta"><td class="doc">Novas APIs Barramento Tasy.xlsx :: <code>1. Grade OPME</code></td><td class="portal"><a href="index.html#operation/gradeOpme"><code>GET /api/v1/procedimentos/grade-opme</code></a><span class="resumo">Grade de OPME de um procedimento</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="proposta"><td class="doc">Novas APIs Barramento Tasy.xlsx :: <code>2. Checklist Material</code></td><td class="portal"><a href="index.html#operation/checklistDispensacaoMaterial"><code>GET /api/v1/pedidos/checklist-dispensacao-material</code></a><span class="resumo">Checklist de dispensação de material do pedido</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="proposta"><td class="doc">Novas APIs Barramento Tasy.xlsx :: <code>3. Proc Associados</code></td><td class="portal"><a href="index.html#operation/procedimentosAssociados"><code>GET /api/v1/historico-cirurgico/procedimentos-associados</code></a><span class="resumo">Procedimentos associados (histórico)</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="proposta"><td class="doc">Novas APIs Barramento Tasy.xlsx :: <code>4. Tempo Médio</code></td><td class="portal"><a href="index.html#operation/tempoMedioCirurgia"><code>GET /api/v1/historico-cirurgico/tempo-medio</code></a><span class="resumo">Tempo médio de cirurgia (histórico)</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+        <tr data-sit="proposta"><td class="doc">Novas APIs Barramento Tasy.xlsx :: <code>5. Diárias</code></td><td class="portal"><a href="index.html#operation/diariasSugeridas"><code>GET /api/v1/historico-cirurgico/diarias-sugeridas</code></a><span class="resumo">Sugestão de diárias (histórico)</span></td><td class="sit"><span class="tag proposta">Proposta</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>HIS→Neoh · Callbacks <span style="font-weight:400;color:#8b95ab">· 12</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado"><td class="doc">Guias <code>(v2).md</code> + <code>swagger-…-v2.yaml</code></td><td class="portal"><a href="index.html#operation/atualizarGuiasAutorizacaoEmLote"><code>POST /api/GuiaAutorizacao/AtualizarGuiasAutorizacaoEmLote</code></a><span class="resumo">Atualizar guias de autorização em lote (v2)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">—</td><td class="portal"><a href="index.html#operation/atualizarGuiasAutorizacao"><code>POST /api/GuiaAutorizacao/AtualizarGuiasAutorizacao</code></a><span class="resumo">Atualizar guias de autorização de um pedido (v2, individual)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Guias <code>(v1).md</code></td><td class="portal"><a href="index.html#operation/atualizarGuiaAutorizacaoConvenioEmLote"><code>POST /api/GuiaAutorizacao/AtualizarGuiaAutorizacaoConvenioEmLote</code></a><span class="resumo">Atualizar guia de autorização do convênio em lote (v1)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Guias <code>(v1).md</code> :: seção final</td><td class="portal"><a href="index.html#operation/atualizarGuiaAutorizacaoConvenio"><code>POST /api/GuiaAutorizacao/AtualizarGuiaAutorizacaoConvenio</code></a><span class="resumo">Atualizar guia de autorização do convênio (v1, individual)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Atualizacao de Fase (Workflow) — Individual</td><td class="portal"><a href="index.html#operation/atualizarFase"><code>PUT /api/WorkflowCirurgico/AtualizarFase</code></a><span class="resumo">Atualização de fase (workflow) — individual</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Atualizacao de Fase (Workflow) em Lote</td><td class="portal"><a href="index.html#operation/atualizarProcessosEmLote"><code>PUT /api/WorkflowCirurgico/AtualizarProcessosEmLote</code></a><span class="resumo">Atualização de fase (workflow) — lote</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Cancelamento de Cirurgia</td><td class="portal"><a href="index.html#operation/realizarCancelamento"><code>PUT /api/CancelamentoCirurgico/RealizarCancelamento</code></a><span class="resumo">Cancelamento de cirurgia</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Atualizacao de Status — Individual</td><td class="portal"><a href="index.html#operation/realizarCirurgia"><code>PUT /api/RealizacaoCirurgia/RealizarCirurgia</code></a><span class="resumo">Executar cirurgia (atualização de status) — individual</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Atualizacao de Status em Lote</td><td class="portal"><a href="index.html#operation/realizarCirurgiaEmLote"><code>PUT /api/RealizacaoCirurgia/RealizarCirurgiaEmLote</code></a><span class="resumo">Executar cirurgia (atualização de status) — lote</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Historico de Agenda — Individual</td><td class="portal"><a href="index.html#operation/inserirHistorico"><code>POST /api/HistoricoCirurgico/InserirHistorico</code></a><span class="resumo">Histórico de agenda — individual</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Historico de Agenda em Lote</td><td class="portal"><a href="index.html#operation/inserirHistoricoEmLote"><code>POST /api/HistoricoCirurgico/InserirHistoricoEmLote</code></a><span class="resumo">Histórico de agenda — lote</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+        <tr data-sit="publicado"><td class="doc">Historico de Autorizacao em Lote</td><td class="portal"><a href="index.html#operation/inserirHistoricoAutorizacaoEmLote"><code>POST /api/HistoricoCirurgico/InserirHistoricoAutorizacaoEmLote</code></a><span class="resumo">Histórico de autorização — lote</span></td><td class="sit"><span class="tag publicado">Publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Documentado, ainda não publicado <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <table>
+      <thead><tr><th>Documentação (repositório OFICIAL)</th><th>Nome no portal</th><th>Situação</th></tr></thead>
+      <tbody>
+        <tr data-sit="naopublicado"><td class="doc">Transferência (novo), sem VACCF + Postman</td><td class="portal"><span style="color:#98a2b7">—</span></td><td class="sit"><span class="tag naopublicado">Não publicado</span></td></tr>
+        <tr data-sit="naopublicado"><td class="doc">Novo Integrar Pedido :: <code>busca-atendimento</code></td><td class="portal"><span style="color:#98a2b7">—</span></td><td class="sit"><span class="tag naopublicado">Não publicado</span></td></tr>
+        <tr data-sit="naopublicado"><td class="doc">Paciente Alergia, sem VACCF + Postman</td><td class="portal"><span style="color:#98a2b7">—</span></td><td class="sit"><span class="tag naopublicado">Não publicado</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <p class="vazio" id="vazio">Nenhuma linha corresponde ao filtro.</p>
+
+  <div class="legenda">
+    <span class="tag publicado">Publicado</span> operação no ar na referência de API, com contrato conferido contra a implementação.<br>
+    <span class="tag proposta">Proposta</span> contrato publicado como proposta; ainda não existe implementação correspondente.<br>
+    <span class="tag naolocalizado">Não localizado</span> operação publicada sem implementação localizada — não usar sem confirmar com a Intelectah.<br>
+    <span class="tag naopublicado">Não publicado</span> integração especificada e fechada, ainda fora da referência de API.
+  </div>
+  <footer>Gerado a partir de <code>DE-PARA-Portal-x-Codigo.md</code> e <code>openapi.yaml</code> em 18/09/2026 · 51 operações publicadas na referência.</footer>
+</main>
+<script>
+(function(){
+  var busca=document.getElementById('busca'), vazio=document.getElementById('vazio'),
+      contagem=document.getElementById('contagem'), chips=[].slice.call(document.querySelectorAll('.chip')),
+      linhas=[].slice.call(document.querySelectorAll('tbody tr')), filtro='todos';
+  function aplicar(){
+    var termo=busca.value.trim().toLowerCase(), vistas=0;
+    linhas.forEach(function(tr){
+      var casaFiltro = filtro==='todos' || tr.dataset.sit===filtro;
+      var casaTermo = !termo || tr.textContent.toLowerCase().indexOf(termo)>-1;
+      var ok = casaFiltro && casaTermo;
+      tr.style.display = ok ? '' : 'none';
+      if(ok) vistas++;
+    });
+    [].slice.call(document.querySelectorAll('section')).forEach(function(s){
+      var algum=[].slice.call(s.querySelectorAll('tbody tr')).some(function(tr){return tr.style.display!=='none';});
+      s.style.display = algum ? '' : 'none';
+    });
+    vazio.style.display = vistas ? 'none' : 'block';
+    contagem.textContent = vistas + (vistas===1?' operação':' operações') + ' de ' + linhas.length;
+  }
+  busca.addEventListener('input', aplicar);
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      filtro=c.dataset.f;
+      chips.forEach(function(o){o.setAttribute('aria-pressed', String(o===c));});
+      aplicar();
+    });
+  });
+  aplicar();
+})();
+</script>
+</body>
+</html>
