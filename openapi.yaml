@@ -2398,7 +2398,7 @@ paths:
               Opmes: []
       responses:
         '200':
-          description: Array com resultado por item (eco + HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss)
+          description: 'Array com resultado por item, na ordem enviada (+ HasError/ErrorMessage; datas em ISO yyyy-MM-ddTHH:mm:ss). Procedimentos e Opmes repetidos voltam consolidados numa linha.'
           content:
             application/json:
               schema:
@@ -2443,6 +2443,166 @@ paths:
                 $ref: '#/components/schemas/MensagemResposta'
               example:
                 Message: Mensagem de erro
+  /api/GuiaAutorizacao/AtualizarGuiasAutorizacao:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarGuiasAutorizacao
+      summary: Atualizar guias de autorização de um pedido (v2, individual)
+      description: 'Mesma estrutura do lote v2, para **um único pedido**. Diferença na resposta: aqui não existe HasError — a falha vem como 400.'
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuiaAutorizacaoLoteItem'
+      responses:
+        '200':
+          description: Operação realizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha de validação ou pedido não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+  /api/GuiaAutorizacao/AtualizarGuiaAutorizacaoConvenioEmLote:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarGuiaAutorizacaoConvenioEmLote
+      summary: Atualizar guia de autorização do convênio em lote (v1)
+      description: 'Versão anterior do lote de guias, **ainda ativa**. Cada item traz **uma única guia** no campo Guia (objeto), e não há Procedimentos nem Opmes. Para integração nova, use a v2 (AtualizarGuiasAutorizacaoEmLote).
+
+
+        Erro de item não retorna 400: o item volta em 200 com HasError. O 400 vale para a requisição inteira — inclusive quando **qualquer** item vem sem o objeto Guia, caso em que nada é processado.
+
+
+        O lote é processado em ordem decrescente de Guia.Status; a resposta volta na ordem enviada.'
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/GuiaAutorizacaoConvenioItem'
+            example:
+            - CdAvisoCirurgia: 9999
+              LoginHis: daniel.koga
+              QtdDiariasSolicitadas: 3
+              QtdDiariasAutorizadas: 2
+              Guia:
+                TipoGuia: 0
+                NrGuia: '123456'
+                Senha: '654321'
+                NrGuiaConvenio: A-99887
+                NrSequencia: 4512
+                Status: 3
+                DataSolicitacao: '2023-07-10'
+                DataAutorizacao: '2023-07-12'
+                DataValidade: '2023-09-12'
+      responses:
+        '200':
+          description: Array com resultado por item, na ordem enviada
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuiaAutorizacaoConvenioResultItem'
+              example:
+              - CdAvisoCirurgia: 9999
+                LoginHis: daniel.koga
+                QtdDiariasSolicitadas: 3
+                QtdDiariasAutorizadas: 2
+                HasError: false
+                ErrorMessage:
+                Guia:
+                  TipoGuia: 0
+                  NrGuia: '123456'
+                  Status: 3
+                  DataAutorizacao: '2023-07-12T00:00:00'
+        '400':
+          description: Falha geral da requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Mensagem de erro
+  /api/GuiaAutorizacao/AtualizarGuiaAutorizacaoConvenio:
+    post:
+      tags:
+      - HIS→Neoh · Callbacks
+      operationId: atualizarGuiaAutorizacaoConvenio
+      summary: Atualizar guia de autorização do convênio (v1, individual)
+      description: 'Versão individual da v1, para um único pedido. Aqui não existe HasError — a falha vem como 400.'
+      security:
+      - clientId: []
+        clientSecret: []
+      servers:
+      - url: https://neohapi{ambiente}-eastus2.azurewebsites.net
+        description: Base da API do Neoh. Usada pelos callbacks do sentido HIS -> Neoh.
+        variables:
+          ambiente:
+            enum:
+            - hml
+            - prd
+            default: hml
+            description: 'Hml = neohapihml-eastus2; prd = neohapiprd-eastus2. Host padronizado em toda a documentação HIS → Neoh.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuiaAutorizacaoConvenioItem'
+      responses:
+        '200':
+          description: Operação realizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
+              example:
+                Message: Operação realizada com sucesso
+        '400':
+          description: Falha de validação ou pedido não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemResposta'
   /api/WorkflowCirurgico/AtualizarFase:
     put:
       tags:
@@ -3858,32 +4018,43 @@ components:
       properties:
         TipoGuia:
           type: integer
-          enum:
-          - 0
-          - 1
-          - 2
-          description: 0 Internação· 1 OPME· 2 Procedimento
+          enum: [0, 1, 2, 3, 4, 5]
+          description: '0 Internação · 1 OPME · 2 Procedimento · 3 Pré-procedimento · 4 Pré-OPME · 5 Compras. O fluxo usa normalmente 0, 1 e 2.'
         NrGuia:
           type: string
+          maxLength: 40
         Senha:
           type: string
-          description: '''0'' equivale a sem senha'
+          maxLength: 40
+          description: 'Na v2, ''0'' equivale a sem senha. Na v1 o valor é gravado como veio.'
         Status:
           type: integer
-          enum:
-          - 3
-          - 4
-          - 9
-          description: 3 Autorizado· 4 Negado· 9 Autorizado parcial
+          enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+          description: '0 Não solicitado · 1 Solicitado · 2 Pendente · 3 Autorizado · 4 Negado · 5 Em negociação · 6 Autorizado por termo · 7 Pré-autorizado · 8 Cancelado · 9 Autorização parcial · 10 Liberado · 11 Aberto · 12 Autorização pós · 13 Verificar guia. O fluxo usa normalmente 3, 4 e 9.'
         DataSolicitacao:
           type: string
-          description: Yyyy-MM-dd (resposta em ISO)
+          description: Yyyy-MM-dd (resposta em ISO). Não pode ser futura.
         DataAutorizacao:
           type: string
-          description: Yyyy-MM-dd (resposta em ISO)
+          description: Yyyy-MM-dd (resposta em ISO). Não pode ser futura nem anterior à data de solicitação.
         DataValidade:
           type: string
-          description: Yyyy-MM-dd (resposta em ISO)
+          description: Yyyy-MM-dd (resposta em ISO). Deve ser maior ou igual à data de autorização.
+        NrGuiaConvenio:
+          type: string
+          description: 'Número da guia no convênio. Na v2, preenchê-lo **altera o modo de processamento**: o Neoh passa a parear Procedimentos e Opmes pelo NrSequencia em vez do NrGuia.'
+        NrSequencia:
+          type: integer
+          minimum: 1
+          description: Código da guia no HIS. Na v2, é o valor que o CustomIdGuia referencia quando NrGuiaConvenio está preenchido.
+        TipoGuiaSolicitacao:
+          type: string
+          enum: [I, O, P]
+          description: 'Alternativa em letra ao TipoGuia (I Internação, O OPME, P Procedimento). Na v2 sobrescreve o valor numérico; na v1 é aceito e **ignorado**.'
+        StatusGuiaSolicitacao:
+          type: string
+          enum: [S, P, A, N, G]
+          description: 'Alternativa em letra ao Status (S Solicitado, P Pendente, A Autorizado, N Negado, G Em negociação). Na v2 sobrescreve o valor numérico; na v1 é aceito e **ignorado**. Não cobre Autorização parcial — para esse use Status.'
     ProcedimentoGuia:
       type: object
       required:
@@ -3896,8 +4067,10 @@ components:
           description: NrSequencia_autor — vincula à guia
         QtdSolicitada:
           type: integer
+          maximum: 32767
         QtdAutorizada:
           type: integer
+          maximum: 32767
     OpmeGuia:
       type: object
       required:
@@ -3910,16 +4083,22 @@ components:
           description: NrSequencia_autor — vincula à guia
         QtdSolicitada:
           type: integer
+          maximum: 32767
         QtdAutorizada:
           type: integer
+          maximum: 32767
         DsFabricante:
           type: string
+          description: Substituído pela descrição cadastrada no Neoh quando CdFabricante vem preenchido.
         CdFabricante:
           type: string
         DsFornecedor:
           type: string
+          description: Substituído pelo nome cadastrado no Neoh quando CdFornecedor vem preenchido.
         CdFornecedor:
           type: string
+          pattern: '^[0-9]+$'
+          description: Texto numérico — o Neoh converte para número para buscar o cadastro.
     GuiaAutorizacaoLoteItem:
       type: object
       required:
@@ -3958,7 +4137,41 @@ components:
           ErrorMessage:
             type: string
             nullable: true
-      description: Eco do item + HasError/ErrorMessage. Datas retornam em ISO yyyy-MM-ddTHH:mm:ss.
+      description: 'Item + HasError/ErrorMessage, na ordem em que foi enviado. Datas em ISO yyyy-MM-ddTHH:mm:ss. Não é eco literal: procedimentos com o mesmo CdCirurgia e OPMEs com o mesmo CdHisOpme voltam agrupados numa linha, com as quantidades somadas.'
+    GuiaAutorizacaoConvenioItem:
+      type: object
+      required:
+      - CdAvisoCirurgia
+      - Guia
+      properties:
+        CdAvisoCirurgia:
+          type: integer
+          description: Código do aviso cirúrgico do pedido no Neoh
+        LoginHis:
+          type: string
+          description: Login do usuário no HIS. Login desconhecido não recusa a requisição — a auditoria fica sem autor.
+        QtdDiariasSolicitadas:
+          type: integer
+          minimum: 0
+          description: Só é aplicada quando a guia é de Internação (TipoGuia 0).
+        QtdDiariasAutorizadas:
+          type: integer
+          minimum: 0
+          description: Só é aplicada quando a guia é de Internação, e não pode ser maior que a solicitada.
+        Guia:
+          $ref: '#/components/schemas/Guia'
+      description: 'Item da v1 — uma única guia por item, no campo Guia (objeto). Item sem Guia derruba o lote inteiro com 400.'
+    GuiaAutorizacaoConvenioResultItem:
+      allOf:
+      - $ref: '#/components/schemas/GuiaAutorizacaoConvenioItem'
+      - type: object
+        properties:
+          HasError:
+            type: boolean
+          ErrorMessage:
+            type: string
+            nullable: true
+      description: Item + HasError/ErrorMessage, na ordem em que foi enviado. Datas em ISO yyyy-MM-ddTHH:mm:ss.
     AtualizarFaseRequest:
       type: object
       required:
