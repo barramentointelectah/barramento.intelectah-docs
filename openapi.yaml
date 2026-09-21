@@ -404,25 +404,40 @@ paths:
               $ref: '#/components/schemas/AgendaPacienteRequest'
             example:
               idAgenda: 3688948222
+              idBupUnidade: 61
               loginUsuario: NEOH
-              dtNascimento: '1972-10-25 00:00:00'
-              ieAnestesia: S
-              ieAutorizacao: PA
+              idBupProfissional: 40095
+              dtNascimento: '1972-10-25'
+              idBupConvenio: 340
+              idBupPlano: '21'
+              idCid: M75.1
+              idPaciente: 1652889
+              novoPaciente: false
+              tipoAcomodacao: 1
+              numeroCarteira: '000123456789'
+              validadeCarteira: '2027-03-31'
+              observacoesExtras: Paciente com alergia a látex
+              dtPrevistaInternacao: '2026-08-25 05:00:00'
+              possuiSangue: N
+              possuiEquipamento: S
+              reservaLeito: S
+              reservaUti: N
+              tecnica: N
+              caraterAtendimento: E
               nmPaciente: PACIENTE TESTE
+              duracaoCirurgia: 90
+              qtdDiasInternacao: 2
+              telefone: '11941142639'
               qtIdadePaciente: 50
               qtIdadeMes: 5
-              telefone: '11941142639'
-              dtPrevistaInternacao: '2026-08-25 05:00:00'
-              cdProcedimento: 195175
-              statusAgenda: M
-              catAtendimento: E
-              idConvenio: 340
-              idPaciente: 1652889
-              ieOrigemProced: O
-              idBupPlano: '21'
-              idMedico: 40095
-              idCategoriaConvenio: 2
-              nrSeqProcInterno: 195175
+              cdAgenda: 45
+              dtAgenda: '2026-08-25'
+              hrInicio: '2026-08-25 08:00:00'
+              nrReserva: '778812'
+              ieAnestesia: S
+              ieTipoAtendimento: 1
+              canalAgendamento: 1
+              tipoAgendamento: 1
       responses:
         '200':
           description: Agenda atualizada
@@ -843,24 +858,23 @@ paths:
             schema:
               $ref: '#/components/schemas/CirurgiaAgendaRequest'
             example:
-              idBupUnidade: 61
               idAgenda: 3688948222
+              idBupUnidade: 61
               loginUsuario: NEOH
-              dtNascimento: '1972-10-25 00:00:00'
-              ieAnestesia: S
-              ieAutorizacao: PA
-              nmPaciente: PACIENTE TESTE
-              telefone: '11941142639'
-              dtPrevistaInternacao: '2026-08-25 05:00:00'
-              cdProcedimento: 195175
-              catAtendimento: E
-              idConvenio: 340
-              idPaciente: 1652889
-              ieOrigemProced: O
+              idBupProfissional: 40095
+              dtNascimento: '1972-10-25'
+              idBupConvenio: 340
               idBupPlano: '21'
-              idMedico: 40095
-              idCategoriaConvenio: 2
-              nrSeqProcInterno: 195175
+              idPaciente: 1652889
+              novoPaciente: false
+              caraterAtendimento: E
+              nmPaciente: PACIENTE TESTE
+              duracaoCirurgia: 90
+              cdAgenda: 45
+              dtAgenda: '2026-08-25'
+              hrInicio: '2026-08-25 08:00:00'
+              ieAnestesia: S
+              ieTipoAtendimento: 1
       responses:
         '200':
           description: Atualizado
@@ -909,7 +923,8 @@ paths:
               $ref: '#/components/schemas/IntegrarPedidoMvRequest'
             example:
               CdMultiEmpresa: 61
-              CdAvisoCirurgia: 3688948222
+              TpSituacao: A
+              CdPaciente: 1652889
               UsuarioHis: NEOH
               NmPaciente: MARIA DA SILVA
               DtInicioCirurgia: '2026-09-20 08:00:00'
@@ -1640,16 +1655,19 @@ paths:
             schema:
               $ref: '#/components/schemas/AutorizacaoConvenioRequest'
             example:
-              idBupUnidade: 61
               idAgenda: 3688948222
-              loginUsuario: NEOH
-              cdCirurgia: 1
+              idBupUnidade: 61
               idBupConvenio: 340
-              idPaciente: 1652889
+              idBupPlano: '21'
+              cdCirurgia: 195175
               login: NEOH
-              nrSeqEstagio: 46
-              idCategoriaConvenio: 2
               idBupProfissional: 40095
+              novoPaciente: false
+              idPaciente: 1652889
+              cdAcomodacao: 1
+              nrSeqEstagio: 46
+              dtInicioVigencia: '2026-08-25 00:00:00'
+              dtEntradaPrevista: '2026-08-25 05:00:00'
               guias:
               - action: new
                 nrAtendimento: 37583723
@@ -1710,13 +1728,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ProcedimentoAutorizadoRequest'
             example:
-              idBupUnidade: 61
-              idAgenda: 3688948222
-              loginUsuario: NEOH
               nrSequenciaAutorizacao: 100
-              login: NEOH
+              idBupPlano: '21'
               idBupConvenio: 340
-              idCategoriaConvenio: 2
+              idBupUnidade: 61
+              login: NEOH
               procedimentos:
               - action: new
                 nrSeqAutor: 100
@@ -1811,7 +1827,6 @@ paths:
               nomeUsuario: NEOH
               historico: Pedido integrado pelo Neoh
               prioridade: A
-              historico: Pedido criado
               tipoSequencia: '1'
       responses:
         '200':
