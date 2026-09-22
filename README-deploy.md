@@ -1,63 +1,96 @@
-# Portal de Documentação — Barramento Neoh × HIS (GitHub Pages)
+# Portal do Barramento — publicação e controle de acesso
 
-Portal público de documentação da API do Barramento, gerado a partir do **OpenAPI 3.0.3** (`openapi.yaml`) e renderizado com **Redoc**. Fonte da verdade = **código-fonte (`Barramento.cs`) + planilhas OFICIAL**. Genérico (Tasy/MV) — sem dependência de HIS específico.
+Portal de documentação da API do Barramento, gerado a partir do **OpenAPI 3.0.3**
+(`openapi.yaml`) e renderizado com **Redoc**. Fonte da verdade = **código-fonte
+(`Barramento.cs` + `CC.Api`) + planilhas OFICIAL**. Genérico (Tasy/MV) — sem dependência de
+HIS específico.
+
+O portal é **de acesso restrito**: quem entra é o e-mail que estiver na lista do
+Cloudflare Access.
 
 ## Conteúdo do pacote
 
 | Arquivo | Função |
 |---|---|
 | `index.html` | Aba **Referência de API**. Carrega o Redoc (CDN) e aponta para `openapi.yaml`. |
-| `openapi.yaml` | Especificação OpenAPI 3.0.3 (49 rotas, 51 operações). É o arquivo a editar. |
-| `de-para.html` | Aba **De-para · Documentação × Portal**. Página estática **gerada** — não editar à mão. |
-| `.nojekyll` | Impede o GitHub de processar os arquivos com Jekyll. |
+| `openapi.yaml` | Especificação OpenAPI 3.0.3. É o arquivo a editar. |
+| `de-para.html` | Aba **De-para · Documentação × Portal**. Página **gerada** — não editar à mão. |
+| `_headers` | Cabeçalhos do Cloudflare Pages: `noindex`, sem cache do contrato. |
+| `robots.txt` | Bloqueia indexação. |
+| `.nojekyll` | Herança do GitHub Pages; inofensivo no Cloudflare. |
 
-## Publicar no GitHub Pages
+## Como o acesso funciona
 
-1. Repositório público `thiagopaz/barramento-docs` (Pages habilitado, branch `main`, pasta raiz).
-2. Repositório em uso: **`thiagopaz/barramento-docs`**. Suba estes arquivos na raiz do branch `main`:
-   ```bash
-   git init
-   git add index.html openapi.yaml de-para.html .nojekyll
-   git commit -m "Portal de documentação do Barramento"
-   git branch -M main
-   git remote add origin https://github.com/thiagopaz/barramento-docs.git
-   git push -u origin main
-   ```
-3. No repositório: **Settings → Pages → Build and deployment → Source = Deploy from a branch**, branch `main`, pasta `/ (root)`. Salve.
-4. Em 1–2 min o site fica em `https://thiagopaz.github.io/barramento-docs/`.
-
-## Aba De-para (`de-para.html`)
-
-Liga cada operação publicada ao documento que a especifica na OFICIAL, com a situação de cada uma
-(publicado / proposta / não localizado / documentado mas ainda não publicado). A página é **gerada** —
-não se edita o HTML. Para regerar depois de mexer no `openapi.yaml` ou no de-para:
-
-```bash
-cd OFICIAL
-python3 .sync/gerar-de-para-html.py
+```mermaid
+flowchart LR
+  A[Visitante] --> B{Cloudflare Access<br/>e-mail na lista?}
+  B -->|não| C[Bloqueado<br/>nem o openapi.yaml sai]
+  B -->|sim| D[Código de uso único<br/>por e-mail]
+  D --> E[Cloudflare Pages<br/>serve o portal]
 ```
 
-O gerador lê `DE-PARA-Portal-x-Codigo.md` (seção *Visão consolidada*) e o `openapi.yaml`, e reescreve
-`de-para.html`. Por decisão de projeto ele **não** publica nomes de método nem números de linha do
-código-fonte: essa parte fica só no de-para interno, na OFICIAL. O gerador avisa no console quando uma
-operação do `openapi.yaml` não tem linha no de-para (ou o contrário) — vale tratar o aviso antes de publicar.
+O bloqueio acontece **antes** do arquivo ser servido: vale para todas as URLs, inclusive
+`openapi.yaml` e `de-para.html` abertos direto. Isso é o que uma trava em JavaScript na
+página **não** faz.
+
+## Publicar (uma vez)
+
+1. **Cloudflare Pages → Create a project → Connect to Git**, apontando para
+   `thiagopaz/barramento-docs`, branch `main`.
+   - Framework preset: **None**
+   - Build command: *(vazio)*
+   - Build output directory: `/`
+2. Aguarde o primeiro deploy. Vai nascer um endereço `*.pages.dev`.
+3. **Zero Trust → Access → Applications → Add an application → Self-hosted**:
+   - Application domain: o domínio do passo 2 (ou o domínio próprio, se usar um)
+   - Session duration: 24 horas é um bom começo
+4. Na política da aplicação:
+   - Policy name: `Integradores do barramento`
+   - Action: **Allow**
+   - Include: **Emails** → cole a lista, um por linha; para o time inteiro use
+     **Emails ending in** → `@intelectah.com.br`
+5. **Zero Trust → Settings → Authentication → Login methods**: deixe **One-time PIN**
+   ligado. É o que faz o visitante externo receber um código no e-mail, sem criar conta.
+6. **Desligue o GitHub Pages** em Settings → Pages do repositório e, de preferência,
+   **torne o repositório privado**. Enquanto o Pages estiver no ar, o endereço
+   `thiagopaz.github.io/barramento-docs` continua servindo tudo sem pedir nada — a
+   proteção do Cloudflare vale só para o endereço do Cloudflare.
+
+## Dar e tirar acesso
+
+Tudo na política do passo 4, sem mexer no repositório:
+
+- **Liberar alguém:** acrescente o e-mail em *Include → Emails* e salve. Vale na hora.
+- **Tirar o acesso:** remova o e-mail e, em **Access → Sessions**, revogue as sessões
+  ativas daquela pessoa (senão ela segue dentro até a sessão expirar).
+- **Quem entrou e quando:** **Zero Trust → Logs → Access**.
+- O link `Sair` no topo do portal chama `/cdn-cgi/access/logout` e encerra a sessão.
+
+Mantenha a lista de quem tem acesso em `OFICIAL/ACESSOS-PORTAL.md` — o registro é nosso;
+a lista que vale é a do Cloudflare.
 
 ## Atualizar a documentação
 
-Toda a documentação vem do `openapi.yaml`. Para alterar:
-
-1. Edite `openapi.yaml` (é a fonte; qualquer ajuste de contrato deve refletir o **código**, nunca o contrário).
-2. Valide antes de publicar:
+1. Edite `openapi.yaml` (é a fonte; qualquer ajuste de contrato deve refletir o **código**,
+   nunca o contrário).
+2. Rode a conferência contra o código — ela também recusa YAML com chave duplicada, que
+   derruba o Redoc inteiro:
    ```bash
-   pip install openapi-spec-validator pyyaml
-   python -c "from openapi_spec_validator import validate; import yaml; validate(yaml.safe_load(open('openapi.yaml'))); print('OK')"
+   cd OFICIAL
+   python3 .sync/conferir-contrato.py
    ```
-3. Regere a aba de-para: `python3 ../.sync/gerar-de-para-html.py` (a partir da OFICIAL).
-4. `git commit` + `git push`. O Pages republica sozinho.
+3. Regere a aba de-para:
+   ```bash
+   python3 .sync/gerar-de-para-html.py
+   ```
+4. `git commit` + `git push`. O Cloudflare Pages republica sozinho a cada push.
 
-## Versão offline (para enviar por e-mail/WhatsApp)
+## Versão offline (para enviar por e-mail)
 
-O arquivo `portal-barramento-api.html` (na pasta OFICIAL, fora deste pacote) é **autocontido**: abre com duplo clique, sem internet e sem servidor. Use-o para mandar a documentação direto para uma pessoa. Ele embute o Redoc e o spec no próprio HTML.
+`portal-barramento-api.html` é **autocontido**: abre com duplo clique, sem internet e sem
+servidor. Não passa pelo Access — quem receber o arquivo lê o conteúdo. Use só com quem já
+está na lista. Regere-o junto com o `openapi.yaml`.
 
 ---
-*Documentação de contrato — reconstruída a partir das planilhas OFICIAL + `Barramento.cs`. Onde a planilha do cliente e o código divergem, o portal segue o código.*
+*Documentação de contrato conferida campo a campo contra o código. Onde a planilha do cliente
+e o código divergem, o portal segue o código.*

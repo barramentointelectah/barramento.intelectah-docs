@@ -1,0 +1,3 @@
+# Portal de acesso restrito (Cloudflare Access). Nada aqui deve ser indexado.
+User-agent: *
+Disallow: /

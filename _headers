@@ -1,0 +1,13 @@
+# Cloudflare Pages — cabecalhos do portal.
+# O controle de acesso NAO esta aqui: quem barra e o Cloudflare Access,
+# na frente do site. Isto so evita indexacao e reduz cache do contrato.
+
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+
+/openapi.yaml
+  Content-Type: text/yaml; charset=utf-8
+  Cache-Control: no-store
