@@ -52,7 +52,7 @@ página **não** faz.
 ## Publicar (uma vez)
 
 1. **Cloudflare Pages → Create a project → Connect to Git**, apontando para
-   `thiagopaz/barramento-docs`, branch `main`.
+   `barramentointelectah/barramento.intelectah-docs`, branch `main`.
    - Framework preset: **None**
    - Build command: *(vazio)*
    - Build output directory: `/`
@@ -69,8 +69,11 @@ página **não** faz.
    ligado. É o que faz o visitante externo receber um código no e-mail, sem criar conta.
 6. **Desligue o GitHub Pages** em Settings → Pages do repositório e, de preferência,
    **torne o repositório privado**. Enquanto o Pages estiver no ar, o endereço
-   `thiagopaz.github.io/barramento-docs` continua servindo tudo sem pedir nada — a
-   proteção do Cloudflare vale só para o endereço do Cloudflare.
+   `barramentointelectah.github.io/barramento.intelectah-docs` continua servindo tudo sem pedir
+   nada — a proteção do Cloudflare vale só para o endereço do Cloudflare.
+
+7. **Repositório antigo** (`thiagopaz/barramento-docs`): desligue o Pages dele e arquive.
+   Enquanto o Pages antigo estiver no ar, a documentação segue pública por lá.
 
 ## Dar e tirar acesso
 
