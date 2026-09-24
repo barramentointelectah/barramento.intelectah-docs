@@ -12,9 +12,11 @@ Cloudflare Access.
 
 | Arquivo | Função |
 |---|---|
-| `index.html` | Aba **Referência de API**. Carrega o Redoc (CDN) e aponta para `openapi.yaml`. |
-| `openapi.yaml` | Especificação OpenAPI 3.0.3. É o arquivo a editar. |
-| `de-para.html` | Aba **De-para · Documentação × Portal**. Página **gerada** — não editar à mão. |
+| `openapi.yaml` | Especificação OpenAPI 3.0.3 completa. **É o único arquivo a editar.** |
+| `index.html` + `openapi-geral.yaml` | Aba **Geral** — rotas que valem para qualquer HIS. Gerados. |
+| `tasy.html` + `openapi-tasy.yaml` | Aba **Tasy** — geral + Tasy, autocontida. Gerados. |
+| `mv.html` + `openapi-mv.yaml` | Aba **MV** — geral + MV, autocontida. Gerados. |
+| `de-para.html` | Aba **De-para**. Gerada de dados (contrato + conferência + escopos + fontes). |
 | `_headers` | Cabeçalhos do Cloudflare Pages: `noindex`, sem cache do contrato. |
 | `robots.txt` | Bloqueia indexação. |
 | `.nojekyll` | Herança do GitHub Pages; inofensivo no Cloudflare. |
@@ -79,11 +81,21 @@ a lista que vale é a do Cloudflare.
    cd OFICIAL
    python3 .sync/conferir-contrato.py
    ```
-3. Regere a aba de-para:
+3. Regere as abas:
    ```bash
-   python3 .sync/gerar-de-para-html.py
+   python3 .sync/gerar-portal.py     # Geral, Tasy e MV
+   python3 .sync/gerar-de-para.py    # aba De-para
    ```
 4. `git commit` + `git push`. O Cloudflare Pages republica sozinho a cada push.
+
+### O que controla o quê
+
+| Arquivo em `.sync/` | Para que serve |
+|---|---|
+| `escopos.json` | Escopo de cada operação: `geral`, `tasy` ou `mv`. Decide em que aba ela entra. |
+| `fontes-oficial.json` | De onde sai o contrato de cada operação na OFICIAL (arquivo e aba). O gerador avisa quando o arquivo citado some. |
+| `lacunas.json` | O que está fora do portal: fila de publicação e o que só existe no código. |
+| `conferencia.json` | Resultado da última conferência contra o código. Gerado. |
 
 ## Versão offline (para enviar por e-mail)
 
