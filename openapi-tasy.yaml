@@ -59,25 +59,25 @@ servers:
 tags:
 - name: Neoh→HIS · Autenticação
   description: Emissão do Bearer token do Barramento (credenciais em headers `client_id`/`client_secret`/`grant_type`).
-- name: Neoh→HIS · Paciente & Cadastro
-  description: Localização e cadastro (simplificado/completo) do paciente no HIS.
+- name: Neoh→HIS · Dados de Referência
+  description: Endpoint único /dados-referencia com 19 entidades de lookup selecionadas por `entidade`.
 - name: Neoh→HIS · Agenda & Mapa
   description: Consulta de disponibilidade, geração de horários, atualização e cancelamento de agenda,
     mapa cirúrgico.
-- name: Neoh→HIS · Dados de Referência
-  description: Endpoint único /dados-referencia com 19 entidades de lookup selecionadas por `entidade`.
+- name: Neoh→HIS · Paciente & Cadastro
+  description: Localização e cadastro (simplificado/completo) do paciente no HIS.
 - name: Neoh→HIS · Integrar Pedido
   description: Criação/atualização/remoção dos itens de um Pedido Cirúrgico. 15 áreas sob /integrar-pedido/*,
     todas POST, roteando por campo `action` no item.
 - name: Neoh→HIS · Edição de Pedido
   description: Endpoints standalone usados na EDIÇÃO de um pedido já existente, fora da orquestração de
     /integrar-pedido.
-- name: HIS→Neoh · Callbacks
-  description: Callbacks que o HIS envia para a API do Neoh. Base = servidor Neoh; auth por headers client_id/client_secret.
 - name: Neoh→HIS · Portal do Médico & Painel (novas APIs)
   description: 'APIs de leitura (GET) para Portal do Médico e Painel Cirúrgico: grade de OPME, checklist
     de material, procedimentos associados, tempo médio e sugestão de diárias. Contratos funcionais; rotas
     propostas.'
+- name: HIS→Neoh · Callbacks
+  description: Callbacks que o HIS envia para a API do Neoh. Base = servidor Neoh; auth por headers client_id/client_secret.
 security:
 - bearerAuth: []
 paths:

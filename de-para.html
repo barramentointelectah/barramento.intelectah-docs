@@ -98,7 +98,7 @@
   publicado, com o escopo de HIS, o resultado da conferência contra o código e o parâmetro por hospital
   de onde sai a URL. No fim, o que ainda está fora do portal.</p>
   <p class="aviso"><b>Conferência contra o código-fonte.</b> As 52 operações publicadas foram confrontadas com a implementação do Neoh: 38 tiveram os campos comparados um a um, 3 tiveram rota e verbo conferidos e 11 não têm implementação localizada. Nenhuma divergência em aberto. A verificação é automática e refaz-se a cada publicação — última em 24/09/2026, sobre o branch <code>homologacao_pr</code> no commit <code>3a0d84c5a8</code>.<br><br><b>Escopo.</b> 29 rotas valem para qualquer HIS, 22 são do Tasy e 1 do MV. O link de cada linha abre a aba certa da referência.</p>
-  <p class="indice"><a href="#g0">Neoh→HIS · Autenticação · 1</a> <a href="#g1">Neoh→HIS · Paciente &amp; Cadastro · 3</a> <a href="#g2">Neoh→HIS · Agenda &amp; Mapa · 7</a> <a href="#g3">Neoh→HIS · Integrar Pedido · 15</a> <a href="#g4">Neoh→HIS · Edição de Pedido · 8</a> <a href="#g5">Neoh→HIS · Dados de Referência · 1</a> <a href="#g6">Neoh→HIS · Portal do Médico &amp; Painel (novas APIs) · 5</a> <a href="#g7">HIS→Neoh · Callbacks · 12</a> <a href="#fila">Fila de publicação · 4</a> <a href="#socodigo">Só no código · 12</a></p>
+  <p class="indice"><a href="#g0">Neoh→HIS · Autenticação · 1</a> <a href="#g1">Neoh→HIS · Dados de Referência · 1</a> <a href="#g2">Neoh→HIS · Agenda &amp; Mapa · 7</a> <a href="#g3">Neoh→HIS · Paciente &amp; Cadastro · 3</a> <a href="#g4">Neoh→HIS · Integrar Pedido · 15</a> <a href="#g5">Neoh→HIS · Edição de Pedido · 8</a> <a href="#g6">Neoh→HIS · Portal do Médico &amp; Painel (novas APIs) · 5</a> <a href="#g7">HIS→Neoh · Callbacks · 12</a> <a href="#fila">Fila de publicação · 4</a> <a href="#socodigo">Só no código · 12</a></p>
   <div class="barra">
     <input id="busca" type="search" placeholder="Buscar por documento, rota, campo ou parâmetro…" autocomplete="off">
     <div class="grupo-filtro">
@@ -138,13 +138,11 @@
   </section>
 
   <section id="g1">
-    <h2>Neoh→HIS · Paciente &amp; Cadastro <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <h2>Neoh→HIS · Dados de Referência <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
     <table>
       <thead><tr><th>Documentação (OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
       <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="doc">Consultar Paciente :: Consultar, Consultar pelo Nr atendimento<span class="caminho">NEOH - Consultar Paciente - Com Script / (VACCF) NEOH - Consultar Paciente - Com Script.xlsx :: Consultar</span></td><td class="portal"><a href="index.html#operation/consultarPaciente"><code>GET /consultar-paciente</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Localiza o paciente no HIS (2 modos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="par"><code>barramento_url_get_pacientes</code></td></tr>
-        <tr data-sit="publicado" data-conf="sem-implementacao" data-esc="geral"><td class="doc">Cadastro Completo de Paciente :: Novo Paciente<span class="caminho">NEOH - Cadastro Completo de Paciente - Com Script / (VACCF) NEOH - Cadastro Completo de Paciente - Com Script.xlsx :: Novo Paciente</span></td><td class="portal"><a href="index.html#operation/cadastroCompleto"><code>POST /cadastro-completo</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente completo (+)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-sem">Sem implementação localizada</span><span class="resumo">sem ponto correspondente localizado no código</span></td><td class="par"><span style="color:#98a2b7">—</span></td></tr>
-        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="doc">Cadastro Simplificado de Paciente :: Novo Paciente<span class="caminho">NEOH - Cadastro Simplificado de Paciente - Com Script / (VACCF) NEOH - Cadastro Simplificado de Paciente - Com Script.xlsx :: Novo Paciente</span></td><td class="portal"><a href="index.html#operation/cadastroSimplificado"><code>POST /cadastro-simplificado</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente mínimo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">8 campos conferidos</span></td><td class="par"><code>barramento_paciente_api_cadastro_novo</code></td></tr>
+        <tr data-sit="publicado" data-conf="sem-implementacao" data-esc="geral"><td class="doc">Dados de Referencia (Complemento) :: 19 abas<span class="caminho">NEOH - Dados de Referencia(Complemento) / (VACCF) NEOH - Dados de Referencia(Complemento).xlsx</span></td><td class="portal"><a href="index.html#operation/dadosReferencia"><code>GET /dados-referencia</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Tabelas de referência (19 entidades)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-sem">Sem implementação localizada</span><span class="resumo">sem ponto correspondente localizado no código</span></td><td class="par"><span style="color:#98a2b7">—</span></td></tr>
       </tbody>
     </table>
   </section>
@@ -166,6 +164,18 @@
   </section>
 
   <section id="g3">
+    <h2>Neoh→HIS · Paciente &amp; Cadastro <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <table>
+      <thead><tr><th>Documentação (OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="doc">Consultar Paciente :: Consultar, Consultar pelo Nr atendimento<span class="caminho">NEOH - Consultar Paciente - Com Script / (VACCF) NEOH - Consultar Paciente - Com Script.xlsx :: Consultar</span></td><td class="portal"><a href="index.html#operation/consultarPaciente"><code>GET /consultar-paciente</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Localiza o paciente no HIS (2 modos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="par"><code>barramento_url_get_pacientes</code></td></tr>
+        <tr data-sit="publicado" data-conf="sem-implementacao" data-esc="geral"><td class="doc">Cadastro Completo de Paciente :: Novo Paciente<span class="caminho">NEOH - Cadastro Completo de Paciente - Com Script / (VACCF) NEOH - Cadastro Completo de Paciente - Com Script.xlsx :: Novo Paciente</span></td><td class="portal"><a href="index.html#operation/cadastroCompleto"><code>POST /cadastro-completo</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente completo (+)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-sem">Sem implementação localizada</span><span class="resumo">sem ponto correspondente localizado no código</span></td><td class="par"><span style="color:#98a2b7">—</span></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="doc">Cadastro Simplificado de Paciente :: Novo Paciente<span class="caminho">NEOH - Cadastro Simplificado de Paciente - Com Script / (VACCF) NEOH - Cadastro Simplificado de Paciente - Com Script.xlsx :: Novo Paciente</span></td><td class="portal"><a href="index.html#operation/cadastroSimplificado"><code>POST /cadastro-simplificado</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente mínimo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">8 campos conferidos</span></td><td class="par"><code>barramento_paciente_api_cadastro_novo</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="g4">
     <h2>Neoh→HIS · Integrar Pedido <span style="font-weight:400;color:#8b95ab">· 15</span></h2>
     <table>
       <thead><tr><th>Documentação (OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
@@ -189,7 +199,7 @@
     </table>
   </section>
 
-  <section id="g4">
+  <section id="g5">
     <h2>Neoh→HIS · Edição de Pedido <span style="font-weight:400;color:#8b95ab">· 8</span></h2>
     <table>
       <thead><tr><th>Documentação (OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
@@ -202,16 +212,6 @@
         <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="doc">Troca de fase (estágio) :: AtualizarAutorizacaoPelaAgendaC<span class="caminho">NEOH -  Cancelar e Troca de Fase / (VACCF) NEOH - Troca de fase (estágio) - Com Script.xlsx :: AtualizarAutorizacaoPelaAgendaC</span></td><td class="portal"><a href="index.html#operation/trocaFase"><code>POST /troca-fase</code></a><span class="esc esc-geral">Geral</span><span class="perfil">token</span><span class="resumo">Troca a fase da agenda (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">4 campos conferidos</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
         <tr data-sit="naolocalizado" data-conf="sem-implementacao" data-esc="geral"><td class="doc">— sem fonte</td><td class="portal"><a href="index.html#operation/verificarDisponibilidade"><code>POST /verificar-disponibilidade</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Verifica slot livre de sala em data/hora</span></td><td class="sit"><span class="tag naolocalizado">Não localizado</span></td><td class="conf"><span class="tag conf-sem">Sem implementação localizada</span><span class="resumo">sem ponto correspondente localizado no código</span></td><td class="par"><span style="color:#98a2b7">—</span></td></tr>
         <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="doc">Troca de fase (estágio) :: AtualizarAutorizacaoPelaAgendaC<span class="caminho">NEOH -  Cancelar e Troca de Fase / (VACCF) NEOH - Troca de fase (estágio) - Com Script.xlsx :: AtualizarAutorizacaoPelaAgendaC</span></td><td class="portal"><a href="tasy.html#operation/trocaFaseMdm"><code>PUT /troca-fase</code></a><span class="esc esc-tasy">Tasy</span><span class="perfil">mdm</span><span class="resumo">Troca fase da autorização e/ou status da agenda (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">7 campos conferidos</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="g5">
-    <h2>Neoh→HIS · Dados de Referência <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
-    <table>
-      <thead><tr><th>Documentação (OFICIAL)</th><th>Nome no portal</th><th>Situação</th><th>Conferência × código</th><th>Parâmetro de URL</th></tr></thead>
-      <tbody>
-        <tr data-sit="publicado" data-conf="sem-implementacao" data-esc="geral"><td class="doc">Dados de Referencia (Complemento) :: 19 abas<span class="caminho">NEOH - Dados de Referencia(Complemento) / (VACCF) NEOH - Dados de Referencia(Complemento).xlsx</span></td><td class="portal"><a href="index.html#operation/dadosReferencia"><code>GET /dados-referencia</code></a><span class="esc esc-geral">Geral</span><span class="resumo">Tabelas de referência (19 entidades)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-sem">Sem implementação localizada</span><span class="resumo">sem ponto correspondente localizado no código</span></td><td class="par"><span style="color:#98a2b7">—</span></td></tr>
       </tbody>
     </table>
   </section>
