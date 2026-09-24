@@ -14,9 +14,23 @@ Cloudflare Access.
 |---|---|
 | `openapi.yaml` | Especificação OpenAPI 3.0.3 completa. **É o único arquivo a editar.** |
 | `index.html` + `openapi-geral.yaml` | Aba **Geral** — rotas que valem para qualquer HIS. Gerados. |
-| `tasy.html` + `openapi-tasy.yaml` | Aba **Tasy** — geral + Tasy, autocontida. Gerados. |
-| `mv.html` + `openapi-mv.yaml` | Aba **MV** — geral + MV, autocontida. Gerados. |
-| `de-para.html` | Aba **De-para**. Gerada de dados (contrato + conferência + escopos + fontes). |
+| `tasy/index.html` + `openapi-tasy.yaml` | Aba **Tasy** — geral + Tasy, autocontida. Gerados. |
+| `mv/index.html` + `openapi-mv.yaml` | Aba **MV** — geral + MV, autocontida. Gerados. |
+| `de-para/index.html` | Aba **De-para**. Gerada de dados (contrato + conferência + escopos + fontes). |
+
+### Os endereços
+
+Cada aba tem o seu link, para você mandar só o que interessa a cada um:
+
+| Quem | Link |
+|---|---|
+| Hospital/integrador **Tasy** | `<site>/tasy/` |
+| Hospital/integrador **MV** | `<site>/mv/` |
+| Time interno (de-para) | `<site>/de-para/` |
+| Visão comum a qualquer HIS | `<site>/` |
+
+O caminho é o que permite, no Cloudflare Access, uma política por link: quem integra Tasy
+recebe acesso a `/tasy*` e não enxerga o resto.
 | `_headers` | Cabeçalhos do Cloudflare Pages: `noindex`, sem cache do contrato. |
 | `robots.txt` | Bloqueia indexação. |
 | `.nojekyll` | Herança do GitHub Pages; inofensivo no Cloudflare. |
