@@ -2,7 +2,8 @@ openapi: 3.0.3
 info:
   title: Barramento de Integração — Neoh × HIS · Tasy
   version: '1.0'
-  description: 'Tudo que um hospital Tasy precisa: as rotas comuns mais as especificas do Tasy.
+  description: 'Documentação do barramento para hospitais **Tasy**: as rotas comuns a qualquer HIS mais
+    as específicas do Tasy.
 
 
     A documentação do barramento é separada por HIS: **Geral** (vale para qualquer HIS), **Tasy** e **MV**.

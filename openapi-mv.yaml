@@ -2,7 +2,8 @@ openapi: 3.0.3
 info:
   title: Barramento de Integração — Neoh × HIS · MV
   version: '1.0'
-  description: 'Tudo que um hospital MV precisa: as rotas comuns mais as especificas do MV.
+  description: 'Documentação do barramento para hospitais **MV**: as rotas comuns a qualquer HIS mais
+    as específicas do MV.
 
 
     A documentação do barramento é separada por HIS: **Geral** (vale para qualquer HIS), **Tasy** e **MV**.

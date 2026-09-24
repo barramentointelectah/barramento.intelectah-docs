@@ -13,10 +13,14 @@ Cloudflare Access.
 | Arquivo | Função |
 |---|---|
 | `openapi.yaml` | Especificação OpenAPI 3.0.3 completa. **É o único arquivo a editar.** |
-| `index.html` + `openapi-geral.yaml` | Aba **Geral** — rotas que valem para qualquer HIS. Gerados. |
-| `tasy/index.html` + `openapi-tasy.yaml` | Aba **Tasy** — geral + Tasy, autocontida. Gerados. |
-| `mv/index.html` + `openapi-mv.yaml` | Aba **MV** — geral + MV, autocontida. Gerados. |
-| `de-para/index.html` | Aba **De-para**. Gerada de dados (contrato + conferência + escopos + fontes). |
+| `tasy/index.html` + `openapi-tasy.yaml` | Página do **Tasy** — comuns + Tasy. Gerados. |
+| `mv/index.html` + `openapi-mv.yaml` | Página do **MV** — comuns + MV. Gerados. |
+| `de-para/index.html` | **De-para**, uso interno. Gerada de dados. |
+| `index.html` | Página neutra da raiz: não leva a lugar nenhum. Gerada. |
+| `_headers`, `robots.txt` | Cabeçalhos do Cloudflare Pages e bloqueio de indexação. |
+
+Não existe mais uma página "Geral": o que vale para qualquer HIS é publicado **dentro** da página
+de cada HIS, marcado operação a operação como comum. Um hospital Tasy lê uma página só.
 
 ### Os endereços
 
@@ -27,10 +31,14 @@ Cada aba tem o seu link, para você mandar só o que interessa a cada um:
 | Hospital/integrador **Tasy** | `<site>/tasy/` |
 | Hospital/integrador **MV** | `<site>/mv/` |
 | Time interno (de-para) | `<site>/de-para/` |
-| Visão comum a qualquer HIS | `<site>/` |
+| Raiz | página neutra, sem links |
 
-O caminho é o que permite, no Cloudflare Access, uma política por link: quem integra Tasy
-recebe acesso a `/tasy*` e não enxerga o resto.
+Cada página é **isolada**: não tem barra de abas nem link para as outras. Quem recebe o endereço do
+Tasy não vê que existe um `/mv/` ou um `/de-para/`.
+
+Isso **esconde**, não protege: quem digitar `/mv/` na barra chega lá. O que impede de verdade é a
+política por caminho no Cloudflare Access — `/tasy*` para quem integra Tasy, `/mv*` para quem integra
+MV, `/de-para*` só para a Intelectah.
 | `_headers` | Cabeçalhos do Cloudflare Pages: `noindex`, sem cache do contrato. |
 | `robots.txt` | Bloqueia indexação. |
 | `.nojekyll` | Herança do GitHub Pages; inofensivo no Cloudflare. |
