@@ -21,6 +21,14 @@
   .indice{font-size:12.5px;color:var(--suave);margin:0 0 18px;line-height:2}
   .indice a{color:var(--primaria);text-decoration:none;border:1px solid var(--linha);border-radius:999px;padding:4px 10px;margin-right:6px;white-space:nowrap}
   .indice a:hover{border-color:var(--primaria)}
+  .abas-his{display:flex;gap:4px;margin:0 0 4px;border-bottom:1px solid var(--linha)}
+  .abas-his button{border:1px solid transparent;border-bottom:none;background:none;font-family:inherit;
+    font-size:14px;font-weight:600;color:var(--suave);padding:9px 18px;border-radius:7px 7px 0 0;cursor:pointer;
+    margin-bottom:-1px}
+  .abas-his button:hover{color:var(--primaria);background:#f7f9fd}
+  .abas-his button[aria-pressed="true"]{color:var(--azul);background:#fff;border-color:var(--linha);
+    border-bottom:1px solid #fff}
+  .abas-his button .cont{font-weight:400;color:#8b95ab;margin-left:6px;font-size:12.5px}
   .barra{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:6px;position:sticky;top:83px;background:#fff;padding:12px 0;z-index:900;border-bottom:1px solid var(--linha)}
   #busca{flex:1;min-width:230px;padding:9px 12px;font-size:14px;border:1px solid #cfd6e4;border-radius:7px;font-family:inherit}
   #busca:focus{outline:none;border-color:var(--primaria);box-shadow:0 0 0 3px rgba(43,87,214,.13)}
@@ -87,15 +95,13 @@
   por hospital de onde sai a URL. No fim, o que ainda está fora do portal.</p>
   <p class="aviso"><b>Conferência contra o código-fonte.</b> As 53 operações publicadas foram confrontadas com a implementação do Neoh: 39 tiveram os campos comparados um a um, 3 tiveram rota e verbo conferidos e 11 não têm implementação localizada. Nenhuma divergência em aberto. A verificação é automática e refaz-se a cada publicação — última em 24/09/2026, sobre o branch <code>homologacao_pr</code> no commit <code>3a0d84c5a8</code>.<br><br><b>Escopo.</b> 29 rotas valem para qualquer HIS, 22 são do Tasy e 2 do MV. O link de cada linha abre a aba certa da referência.</p>
   <p class="indice"><a href="#g0">Neoh→HIS · Autenticação · 1</a> <a href="#g1">Neoh→HIS · Dados de Referência · 1</a> <a href="#g2">Neoh→HIS · Agenda &amp; Mapa · 8</a> <a href="#g3">Neoh→HIS · Paciente &amp; Cadastro · 3</a> <a href="#g4">Neoh→HIS · Integrar Pedido · 15</a> <a href="#g5">Neoh→HIS · Edição de Pedido · 8</a> <a href="#g6">Neoh→HIS · Portal do Médico &amp; Painel (novas APIs) · 5</a> <a href="#g7">HIS→Neoh · Callbacks · 12</a> <a href="#fila">Fila de publicação · 3</a> <a href="#socodigo">Só no código · 12</a></p>
+  <div class="abas-his">
+    <button data-his="tasy" aria-pressed="true">Tasy<span class="cont">66</span></button>
+    <button data-his="mv" aria-pressed="false">MV<span class="cont">44</span></button>
+    <button data-his="tudo" aria-pressed="false">Tudo<span class="cont">68</span></button>
+  </div>
   <div class="barra">
     <input id="busca" type="search" placeholder="Buscar por documento, rota, campo ou parâmetro…" autocomplete="off">
-    <div class="grupo-filtro">
-      <span class="rot">Escopo</span>
-      <button class="chip" data-g="esc" data-f="todos" aria-pressed="true">Todos</button>
-      <button class="chip" data-g="esc" data-f="geral" aria-pressed="false">Geral</button>
-      <button class="chip" data-g="esc" data-f="tasy" aria-pressed="false">Tasy</button>
-      <button class="chip" data-g="esc" data-f="mv" aria-pressed="false">MV</button>
-    </div>
     <div class="grupo-filtro">
       <span class="rot">Situação</span>
       <button class="chip" data-g="sit" data-f="todos" aria-pressed="true">Todas</button>
@@ -296,13 +302,16 @@
   var busca=document.getElementById('busca'), vazio=document.getElementById('vazio'),
       contagem=document.getElementById('contagem'), chips=[].slice.call(document.querySelectorAll('.chip')),
       linhas=[].slice.call(document.querySelectorAll('tbody tr')),
-      filtros={sit:'todos', conf:'todos', esc:'todos'};
+      abas=[].slice.call(document.querySelectorAll('.abas-his button')),
+      filtros={sit:'todos', conf:'todos'}, his='tasy';
   function aplicar(){
     var termo=busca.value.trim().toLowerCase(), vistas=0;
     linhas.forEach(function(tr){
-      var ok = (filtros.sit==='todos'  || tr.dataset.sit===filtros.sit) &&
+      var e=tr.dataset.esc;
+      var casaHis = (his==='tudo') || (e==='geral') || (e===his);
+      var ok = casaHis &&
+               (filtros.sit==='todos'  || tr.dataset.sit===filtros.sit) &&
                (filtros.conf==='todos' || tr.dataset.conf===filtros.conf) &&
-               (filtros.esc==='todos'  || tr.dataset.esc===filtros.esc) &&
                (!termo || tr.textContent.toLowerCase().indexOf(termo)>-1);
       tr.style.display = ok ? '' : 'none';
       if(ok) vistas++;
@@ -316,6 +325,13 @@
     vazio.style.display = vistas ? 'none' : 'block';
     contagem.textContent = vistas + (vistas===1?' linha':' linhas') + ' de ' + linhas.length;
   }
+  abas.forEach(function(a){
+    a.addEventListener('click', function(){
+      his=a.dataset.his;
+      abas.forEach(function(o){o.setAttribute('aria-pressed', String(o===a));});
+      aplicar();
+    });
+  });
   busca.addEventListener('input', aplicar);
   chips.forEach(function(c){
     c.addEventListener('click', function(){
