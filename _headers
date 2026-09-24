@@ -11,3 +11,11 @@
 /openapi.yaml
   Content-Type: text/yaml; charset=utf-8
   Cache-Control: no-store
+
+/openapi-tasy.yaml
+  Content-Type: text/yaml; charset=utf-8
+  Cache-Control: no-store
+
+/openapi-mv.yaml
+  Content-Type: text/yaml; charset=utf-8
+  Cache-Control: no-store
