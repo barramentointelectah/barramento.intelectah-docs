@@ -4120,6 +4120,34 @@ components:
           nullable: true
         DsMaterial:
           type: string
+    SuspensaoCirurgiaRequest:
+      type: object
+      description: 'Corpo da suspensão (objeto `SuspensaoCirurgiaVM`), conferido campo a campo contra
+        o código e contra a planilha `Suspensão - Request (NEOH)` da OFICIAL.
+
+        '
+      required:
+      - CdMultiEmpresa
+      - CdAvisoCirurgia
+      - CdMotivoSuspensao
+      - UsuarioHis
+      - DsObservacoes
+      properties:
+        CdMultiEmpresa:
+          type: integer
+          description: Código corporativo da unidade; vai também como parâmetro da package no HIS.
+        CdAvisoCirurgia:
+          type: string
+          description: Código do aviso cirúrgico a suspender.
+        CdMotivoSuspensao:
+          type: integer
+          description: Código do motivo da suspensão.
+        UsuarioHis:
+          type: string
+          description: Login do usuário no HIS.
+        DsObservacoes:
+          type: string
+          description: Observação da suspensão.
     CancelamentoAgendaRequest:
       type: object
       description: 'Contrato novo do cancelamento (objeto `CancelamentoCirurgiaVM`), conferido campo a

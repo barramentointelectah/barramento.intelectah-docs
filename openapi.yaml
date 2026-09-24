@@ -582,6 +582,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespostaErroNeoh'
+  /suspender:
+    post:
+      tags:
+      - Neoh→HIS · Agenda & Mapa
+      operationId: suspenderCirurgia
+      summary: Suspende a cirurgia agendada
+      description: >
+        Aciona a suspensão de uma solicitação já agendada. Resolvida pelo parâmetro
+        `barramento_rota_suspensao`, configurado por hospital.
+
+
+        Não confundir com o cancelamento: a suspensão mantém o agendamento e registra o motivo,
+        enquanto `/cancelar` encerra o aviso cirúrgico.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspensaoCirurgiaRequest'
+            example:
+              CdMultiEmpresa: 1
+              CdAvisoCirurgia: '123456'
+              CdMotivoSuspensao: 50
+              UsuarioHis: '122345'
+              DsObservacoes: Observações da suspensão
+      responses:
+        '200':
+          description: Suspensão registrada. O Neoh avalia apenas o status HTTP.
+        '500':
+          description: Falha ao suspender; o corpo traz a mensagem de erro.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespostaErroNeoh'
   /mapa-cirurgico:
     get:
       tags:
@@ -3860,6 +3896,33 @@ components:
           nullable: true
         DsMaterial:
           type: string
+    SuspensaoCirurgiaRequest:
+      type: object
+      description: >
+        Corpo da suspensão (objeto `SuspensaoCirurgiaVM`), conferido campo a campo contra o código e
+        contra a planilha `Suspensão - Request (NEOH)` da OFICIAL.
+      required:
+      - CdMultiEmpresa
+      - CdAvisoCirurgia
+      - CdMotivoSuspensao
+      - UsuarioHis
+      - DsObservacoes
+      properties:
+        CdMultiEmpresa:
+          type: integer
+          description: Código corporativo da unidade; vai também como parâmetro da package no HIS.
+        CdAvisoCirurgia:
+          type: string
+          description: Código do aviso cirúrgico a suspender.
+        CdMotivoSuspensao:
+          type: integer
+          description: Código do motivo da suspensão.
+        UsuarioHis:
+          type: string
+          description: Login do usuário no HIS.
+        DsObservacoes:
+          type: string
+          description: Observação da suspensão.
     CancelamentoAgendaRequest:
       type: object
       description: >
