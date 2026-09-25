@@ -62,18 +62,15 @@ tags:
   description: Emissão do Bearer token do Barramento (credenciais em headers `client_id`/`client_secret`/`grant_type`).
 - name: Neoh→HIS · Dados de Referência
   description: Endpoint único /dados-referencia com 19 entidades de lookup selecionadas por `entidade`.
-- name: Neoh→HIS · Mapa Cirúrgico
-  description: 'Leitura da ocupação do centro cirúrgico: o mapa de horários e equipamentos de um bloco,
-    e a geração das vagas livres a partir dele.'
-- name: Neoh→HIS · Suspensão de Cirurgia
-  description: 'Suspensão de uma cirurgia já agendada, sem cancelá-la. Específico do MV: o Neoh envia
-    o motivo da suspensão e o aviso cirúrgico continua existindo no HIS.'
 - name: Neoh→HIS · Consulta de Paciente
   description: Localizar um paciente que já existe no HIS, antes de montar o pedido. A busca tem dois
     modos e muda de forma conforme o perfil de integração do hospital.
 - name: Neoh→HIS · Cadastro de Paciente
   description: Criar no HIS um paciente que o Neoh ainda não encontrou pela consulta, para que o pedido
     cirúrgico possa ser integrado em seguida.
+- name: Neoh→HIS · Mapa Cirúrgico
+  description: 'Leitura da ocupação do centro cirúrgico: o mapa de horários e equipamentos de um bloco,
+    e a geração das vagas livres a partir dele.'
 - name: Neoh→HIS · Integrar Pedido
   description: Criação/atualização/remoção dos itens de um Pedido Cirúrgico. 15 áreas sob /integrar-pedido/*,
     todas POST, roteando por campo `action` no item.
@@ -132,13 +129,16 @@ tags:
     **carga inicial** não passa por nenhuma rota de `/integrar-pedido/cirurgia-*` — ela vai inteira num
     único POST para `/integrar-pedido/agenda-cirurgica`. As rotas por item são o desenho do Tasy, e é
     nelas que a edição cai de qualquer jeito.'
+- name: Neoh→HIS · Integrar Anexo
+  description: 'Envio de anexos do pedido para o HIS. Há duas formas, e o hospital usa uma ou outra: por
+    caminho de arquivo, ou com o arquivo embutido em Base64.'
 - name: Neoh→HIS · Troca de Fase
   description: 'Avanço do pedido pelo workflow do HIS: troca de fase do pedido e, no perfil MDM, também
     o estágio da autorização. O cancelamento de guia usa este mesmo mecanismo — mover a guia para o estágio
     de cancelamento configurado no hospital.'
-- name: Neoh→HIS · Integrar Anexo
-  description: 'Envio de anexos do pedido para o HIS. Há duas formas, e o hospital usa uma ou outra: por
-    caminho de arquivo, ou com o arquivo embutido em Base64.'
+- name: Neoh→HIS · Suspensão de Cirurgia
+  description: 'Suspensão de uma cirurgia já agendada, sem cancelá-la. Específico do MV: o Neoh envia
+    o motivo da suspensão e o aviso cirúrgico continua existindo no HIS.'
 - name: Neoh→HIS · Cancelamento
   description: Cancelamento de um pedido cirúrgico já integrado e das guias de convênio que ele gerou.
     O cancelamento do agendamento tem três caminhos no código, escolhidos por configuração do hospital

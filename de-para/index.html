@@ -94,7 +94,7 @@
   conferência contra o código, a função do código que atende a rota e o parâmetro por hospital de onde sai
   a URL. No fim, o que o código chama e o portal ainda não documenta.</p>
   <p class="aviso"><b>Conferência contra o código-fonte.</b> As 49 operações publicadas foram confrontadas com a implementação do Neoh: 45 tiveram os campos comparados um a um, 4 tiveram rota e verbo conferidos e 0 não têm implementação localizada. Nenhuma divergência em aberto. A verificação é automática e refaz-se a cada publicação — última em 25/09/2026, sobre o branch <code>thiagopaz/log-url-barramento-obrigatoria</code> no commit <code>a24c497cdb</code>.<br><br><b>Escopo.</b> 25 rotas valem para qualquer HIS, 22 são do Tasy e 2 do MV. O link de cada linha abre a aba certa da referência.</p>
-  <p class="indice"><a href="#g0">Neoh→HIS · Autenticação · 1</a> <a href="#g1">Neoh→HIS · Dados de Referência · 1</a> <a href="#g2">Neoh→HIS · Agenda · 3</a> <a href="#g3">Neoh→HIS · Mapa Cirúrgico · 2</a> <a href="#g4">Neoh→HIS · Suspensão de Cirurgia · 1</a> <a href="#g5">Neoh→HIS · Consulta de Paciente · 1</a> <a href="#g6">Neoh→HIS · Cadastro de Paciente · 1</a> <a href="#g7">Neoh→HIS · Integrar Pedido · 14</a> <a href="#g8">Neoh→HIS · Reintegrar Pedido · 6</a> <a href="#g9">Neoh→HIS · Troca de Fase · 3</a> <a href="#g10">Neoh→HIS · Integrar Anexo · 2</a> <a href="#g11">Neoh→HIS · Cancelamento · 2</a> <a href="#g12">HIS→Neoh · Callbacks · 12</a> <a href="#naopublicado">Não publicado · 22</a></p>
+  <p class="indice"><a href="#g0">Neoh→HIS · Autenticação · 1</a> <a href="#g1">Neoh→HIS · Dados de Referência · 1</a> <a href="#g2">Neoh→HIS · Consulta de Paciente · 1</a> <a href="#g3">Neoh→HIS · Cadastro de Paciente · 1</a> <a href="#g4">Neoh→HIS · Mapa Cirúrgico · 2</a> <a href="#g5">Neoh→HIS · Integrar Pedido · 14</a> <a href="#g6">Neoh→HIS · Reintegrar Pedido · 6</a> <a href="#g7">Neoh→HIS · Integrar Anexo · 2</a> <a href="#g8">Neoh→HIS · Agenda · 3</a> <a href="#g9">Neoh→HIS · Troca de Fase · 2</a> <a href="#g10">Neoh→HIS · Suspensão de Cirurgia · 1</a> <a href="#g11">Neoh→HIS · Cancelamento · 3</a> <a href="#g12">HIS→Neoh · Callbacks · 12</a> <a href="#naopublicado">Não publicado · 22</a></p>
   <div class="abas-his">
     <button data-his="tasy" aria-pressed="true">Tasy<span class="cont">69</span></button>
     <button data-his="mv" aria-pressed="false">MV<span class="cont">49</span></button>
@@ -142,18 +142,26 @@
   </section>
 
   <section id="g2">
-    <h2>Neoh→HIS · Agenda <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <h2>Neoh→HIS · Consulta de Paciente <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
       <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>GET /agenda-disponivel</code><span class="esc esc-tasy">Tasy</span><span class="resumo">IDs de agenda disponíveis para uma sala/data</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="fn"><code>ObterIdAgendaDisponivelAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_get_agenda_disponivel</code></td></tr>
-        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /agenda-paciente</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Atualiza a cabeça da agenda cirúrgica do paciente</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">40 campos conferidos</span></td><td class="fn"><code>AtualizarAgendaPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_post_agenda_paciente</code></td></tr>
-        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /busca-agenda</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Busca agenda por unidade/sequência/status (legada)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">3 campos conferidos</span></td><td class="fn"><code>MontarDadosAgendaPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_get_buscar_agenda</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>GET /consultar-paciente</code><span class="esc esc-geral">Geral</span><span class="resumo">Localiza o paciente no HIS (2 modos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="fn"><code>ConsultarPacienteGeralAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_get_pacientes</code></td></tr>
       </tbody>
     </table>
   </section>
 
   <section id="g3">
+    <h2>Neoh→HIS · Cadastro de Paciente <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
+    <table>
+      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>POST /cadastro-simplificado</code><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente mínimo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">8 campos conferidos</span></td><td class="fn"><code>CadastrarNovoPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_paciente_api_cadastro_novo</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="g4">
     <h2>Neoh→HIS · Mapa Cirúrgico <span style="font-weight:400;color:#8b95ab">· 2</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
@@ -164,37 +172,7 @@
     </table>
   </section>
 
-  <section id="g4">
-    <h2>Neoh→HIS · Suspensão de Cirurgia <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
-    <table>
-      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
-      <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="mv"><td class="portal"><code>POST /suspender</code><span class="esc esc-mv">MV</span><span class="resumo">Suspende a cirurgia agendada</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">5 campos conferidos</span></td><td class="fn"><code>SuspenderCirurgiaAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_rota_suspensao</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
   <section id="g5">
-    <h2>Neoh→HIS · Consulta de Paciente <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
-    <table>
-      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
-      <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>GET /consultar-paciente</code><span class="esc esc-geral">Geral</span><span class="resumo">Localiza o paciente no HIS (2 modos)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="fn"><code>ConsultarPacienteGeralAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_get_pacientes</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="g6">
-    <h2>Neoh→HIS · Cadastro de Paciente <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
-    <table>
-      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
-      <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>POST /cadastro-simplificado</code><span class="esc esc-geral">Geral</span><span class="resumo">Cria paciente mínimo</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">8 campos conferidos</span></td><td class="fn"><code>CadastrarNovoPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_paciente_api_cadastro_novo</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="g7">
     <h2>Neoh→HIS · Integrar Pedido <span style="font-weight:400;color:#8b95ab">· 14</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
@@ -217,7 +195,7 @@
     </table>
   </section>
 
-  <section id="g8">
+  <section id="g6">
     <h2>Neoh→HIS · Reintegrar Pedido <span style="font-weight:400;color:#8b95ab">· 6</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
@@ -232,19 +210,7 @@
     </table>
   </section>
 
-  <section id="g9">
-    <h2>Neoh→HIS · Troca de Fase <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
-    <table>
-      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
-      <tbody>
-        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /status-autorizacao</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Cancela as guias de autorização do convênio</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">6 campos conferidos</span></td><td class="fn"><code>CancelarGuiasConvenioAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_post_cancelar_autorizacao_convenio</code></td></tr>
-        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>POST /troca-fase</code><span class="esc esc-geral">Geral</span><span class="perfil">token</span><span class="resumo">Troca a fase do pedido (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">4 campos conferidos</span></td><td class="fn"><code>TrocarDeFaseAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
-        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>PUT /troca-fase</code><span class="esc esc-tasy">Tasy</span><span class="perfil">mdm</span><span class="resumo">Troca fase da autorização e/ou status do pedido (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">7 campos conferidos</span></td><td class="fn"><code>TrocarDeFaseAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="g10">
+  <section id="g7">
     <h2>Neoh→HIS · Integrar Anexo <span style="font-weight:400;color:#8b95ab">· 2</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
@@ -255,13 +221,47 @@
     </table>
   </section>
 
+  <section id="g8">
+    <h2>Neoh→HIS · Agenda <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
+    <table>
+      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>GET /agenda-disponivel</code><span class="esc esc-tasy">Tasy</span><span class="resumo">IDs de agenda disponíveis para uma sala/data</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">1 campo conferido</span></td><td class="fn"><code>ObterIdAgendaDisponivelAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_get_agenda_disponivel</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /agenda-paciente</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Atualiza a cabeça da agenda cirúrgica do paciente</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">40 campos conferidos</span></td><td class="fn"><code>AtualizarAgendaPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_url_post_agenda_paciente</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /busca-agenda</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Busca agenda por unidade/sequência/status (legada)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">3 campos conferidos</span></td><td class="fn"><code>MontarDadosAgendaPacienteAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_get_buscar_agenda</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="g9">
+    <h2>Neoh→HIS · Troca de Fase <span style="font-weight:400;color:#8b95ab">· 2</span></h2>
+    <table>
+      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>POST /troca-fase</code><span class="esc esc-geral">Geral</span><span class="perfil">token</span><span class="resumo">Troca a fase do pedido (perfil Token)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">4 campos conferidos</span></td><td class="fn"><code>TrocarDeFaseAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>PUT /troca-fase</code><span class="esc esc-tasy">Tasy</span><span class="perfil">mdm</span><span class="resumo">Troca fase da autorização e/ou status do pedido (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">7 campos conferidos</span></td><td class="fn"><code>TrocarDeFaseAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_put_workflow_agenda</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="g10">
+    <h2>Neoh→HIS · Suspensão de Cirurgia <span style="font-weight:400;color:#8b95ab">· 1</span></h2>
+    <table>
+      <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
+      <tbody>
+        <tr data-sit="publicado" data-conf="campos" data-esc="mv"><td class="portal"><code>POST /suspender</code><span class="esc esc-mv">MV</span><span class="resumo">Suspende a cirurgia agendada</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">5 campos conferidos</span></td><td class="fn"><code>SuspenderCirurgiaAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_rota_suspensao</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
   <section id="g11">
-    <h2>Neoh→HIS · Cancelamento <span style="font-weight:400;color:#8b95ab">· 2</span></h2>
+    <h2>Neoh→HIS · Cancelamento <span style="font-weight:400;color:#8b95ab">· 3</span></h2>
     <table>
       <thead><tr><th>Operação publicada</th><th>Situação</th><th>Conferência × código</th><th>Função no código</th><th>Parâmetro de URL</th></tr></thead>
       <tbody>
         <tr data-sit="publicado" data-conf="rota" data-esc="geral"><td class="portal"><code>DELETE /cancelar</code><span class="esc esc-geral">Geral</span><span class="perfil">mdm</span><span class="resumo">Cancela agendamento cirúrgico (perfil MDM)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-rota">Rota conferida</span><span class="resumo">resposta não consumida pelo código</span></td><td class="fn"><code>RealizarCancelamentoMdmAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_external_rota_post_cancelar_pedido</code></td></tr>
         <tr data-sit="publicado" data-conf="campos" data-esc="geral"><td class="portal"><code>POST /cancelar</code><span class="esc esc-geral">Geral</span><span class="perfil">token</span><span class="resumo">Cancela agendamento cirúrgico (POST — contrato novo ou rota antiga)</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">12 campos conferidos</span></td><td class="fn"><code>RealizarCancelamentoAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_external_rota_post_cancelar_pedido</code></td></tr>
+        <tr data-sit="publicado" data-conf="campos" data-esc="tasy"><td class="portal"><code>POST /status-autorizacao</code><span class="esc esc-tasy">Tasy</span><span class="resumo">Cancela as guias de autorização do convênio</span></td><td class="sit"><span class="tag publicado">Publicado</span></td><td class="conf"><span class="tag conf-ok">Conferido campo a campo</span><span class="resumo">6 campos conferidos</span></td><td class="fn"><code>CancelarGuiasConvenioAsync</code><span class="caminho">Barramento.cs</span></td><td class="par"><code>barramento_post_cancelar_autorizacao_convenio</code></td></tr>
       </tbody>
     </table>
   </section>
