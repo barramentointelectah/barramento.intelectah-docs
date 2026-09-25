@@ -15,6 +15,7 @@ o contrato publicado é conferido campo a campo contra ele a cada alteração.
 | `index.html` | Página neutra da raiz: não leva a lugar nenhum. Gerada. |
 | `_headers` | Cabeçalhos do Cloudflare Pages: `noindex` e sem cache do contrato. |
 | `robots.txt` | Bloqueia indexação. |
+| `functions/_middleware.js` | **O controle de acesso.** Roda no Cloudflare antes de servir qualquer arquivo. |
 | `.nojekyll` | Herança do GitHub Pages; inofensivo. |
 
 Não existe página "Geral": o que vale para qualquer HIS é publicado **dentro** da página de
@@ -40,16 +41,37 @@ quem digitar `/mv/` chega lá. O que protege é a política por caminho, abaixo.
 
 ## Como o acesso funciona
 
+Uma função de middleware roda no Cloudflare Pages **antes** de qualquer arquivo ser servido —
+inclusive um `.yaml` aberto direto na barra de endereço. É isso que uma trava em JavaScript
+dentro da página não faz.
+
 ```mermaid
 flowchart LR
-  A[Visitante] --> B{Cloudflare Access<br/>e-mail na lista<br/>daquele caminho?}
-  B -->|não| C[Bloqueado<br/>nem o contrato sai]
-  B -->|sim| D[Código de uso único<br/>por e-mail]
-  D --> E[Cloudflare Pages<br/>serve a página]
+  A[Visitante] --> B{Caminho pedido}
+  B --> C[Senha daquele<br/>caminho e perfil]
+  C -->|errada| D[401<br/>nem o contrato sai]
+  C -->|certa| E[Pages serve<br/>a pagina]
 ```
 
-O bloqueio acontece **antes** do arquivo ser servido, para qualquer URL — inclusive um
-`.yaml` aberto direto na barra. É isso que uma trava em JavaScript dentro da página não faz.
+Cada caminho aceita **duas senhas, uma por perfil**:
+
+| Caminho | Usuário `intelectah` | Usuário `integrador` |
+|---|---|---|
+| `/tasy/*` | `SENHA_INTELECTAH_TASY` | `SENHA_INTEGRADOR_TASY` |
+| `/mv/*` | `SENHA_INTELECTAH_MV` | `SENHA_INTEGRADOR_MV` |
+| `/de-para/*` | `SENHA_INTELECTAH_DEPARA` | — |
+| tudo o mais (raiz, `openapi.yaml`) | `SENHA_INTELECTAH_RAIZ` | — |
+
+O integrador recebe usuário `integrador` e a senha do HIS dele. O time interno usa
+`intelectah` com a senha daquele caminho. A separação por perfil serve para uma coisa
+prática: quando um integrador sai do projeto, troca-se só a senha dele e o time interno
+continua entrando.
+
+Se preferir uma senha interna só para tudo, basta repetir o mesmo valor nas quatro variáveis
+`SENHA_INTELECTAH_*`. A função não muda.
+
+**Fechado por omissão:** variável não preenchida = ninguém entra por ali. Esquecer de
+configurar tranca, não abre.
 
 ## Publicar (uma vez)
 
@@ -64,31 +86,29 @@ O bloqueio acontece **antes** do arquivo ser servido, para qualquer URL — incl
 | Build command | *(vazio)* |
 | Build output directory | `/` |
 
-Aguarde o primeiro deploy: nasce um endereço `<projeto>.pages.dev`. Guarde-o — é o `<site>`
-de todos os passos seguintes.
+O Cloudflare encontra a pasta `functions/` sozinho e passa a rodá-la em cada requisição.
+Guarde o endereço `<projeto>.pages.dev` que nasce do primeiro deploy.
 
-**2. Ligar o código por e-mail**
+**2. Cadastrar as senhas**
 
-*Zero Trust → Settings → Authentication → Login methods*: deixe **One-time PIN** ligado. É o
-que faz o visitante externo receber um código no e-mail, sem precisar criar conta.
+*Settings → Environment variables → Production → Add variable*, uma para cada linha da tabela
+acima. Marque **Encrypt** em todas — assim ficam ilegíveis até para quem abre o painel depois.
 
-**3. Criar quatro aplicações, uma por público**
+Gere senhas longas e aleatórias; elas não são digitadas de memória, ficam salvas no navegador
+de quem usa. Um gerador de senha de 24 caracteres serve.
 
-*Zero Trust → Access → Applications → Add an application → Self-hosted*. Em cada uma, a
-**Session duration** de 24 horas é um bom começo.
+Depois de salvar, **refaça o deploy** (*Deployments → Retry deployment*): variável nova só
+vale para deploys seguintes.
 
-| # | Application domain | Path | Política: Include | Quem entra |
-|---|---|---|---|---|
-| 1 | `<site>` | `tasy` | Emails → lista dos integradores Tasy | Integrador Tasy |
-| 2 | `<site>` | `mv` | Emails → lista dos integradores MV | Integrador MV |
-| 3 | `<site>` | `de-para` | Emails ending in → `@intelectah.com.br` | Só a Intelectah |
-| 4 | `<site>` | *(vazio)* | Emails ending in → `@intelectah.com.br` | Só a Intelectah |
+**3. Testar**
 
-A de número 4 é a rede de segurança: pega a raiz, o `openapi.yaml` completo e qualquer arquivo
-novo que apareça. O Access casa sempre o caminho mais específico primeiro, então as três de
-cima continuam valendo. Em todas, **Action: Allow**.
+Numa janela anônima:
 
-Acrescente a você mesmo na lista de cada uma das quatro, senão você se tranca para fora.
+- `<site>/tasy/` → pede usuário e senha; entre com `integrador` + a senha do Tasy
+- `<site>/tasy/openapi-tasy.yaml` → **deve abrir sem pedir de novo** (a sessão vale para o
+  caminho inteiro) — é o teste que importa: prova que o contrato está protegido junto
+- `<site>/mv/` → a senha do Tasy **não** pode entrar
+- `<site>/openapi.yaml` → só com `intelectah` + `SENHA_INTELECTAH_RAIZ`
 
 **4. Desligar o GitHub Pages — este passo não é opcional**
 
@@ -97,23 +117,25 @@ Acrescente a você mesmo na lista de cada uma das quatro, senão você se tranca
 proteção do Cloudflare vale só para o endereço do Cloudflare.
 
 Em seguida, **torne o repositório privado** (*Settings → General → Danger Zone*). O Cloudflare
-continua publicando normalmente — a conexão dele com o Git não depende de o repositório ser
-público.
+continua publicando normalmente.
 
-**5. Repositório antigo** (`thiagopaz/barramento-docs`): desligue o Pages dele e arquive.
+**5. Repositório antigo** (`thiagopaz/barramento-docs`): desligue o Pages e arquive.
 
 ## Dar e tirar acesso
 
-Tudo na política da aplicação do público em questão, sem tocar no repositório:
+- **Liberar alguém:** mande o usuário (`integrador` ou `intelectah`) e a senha do caminho dele.
+- **Tirar o acesso:** troque a senha daquele caminho e perfil em *Settings → Environment
+  variables*, refaça o deploy e avise quem continua. É por isso que a senha do integrador é
+  separada da interna — trocar uma não derruba a outra.
+- **Trocar por rotina:** vale trocar as senhas de integrador a cada entrega concluída.
 
-- **Liberar alguém:** acrescente o e-mail em *Include → Emails* e salve. Vale na hora.
-- **Tirar o acesso:** remova o e-mail e, em *Access → Sessions*, revogue as sessões ativas
-  daquela pessoa — senão ela segue dentro até a sessão expirar.
-- **Quem entrou e quando:** *Zero Trust → Logs → Access*.
-- O link `Sair` no topo do portal chama `/cdn-cgi/access/logout` e encerra a sessão.
+Mantenha o registro de quem recebeu qual senha em `OFICIAL/ACESSOS-PORTAL.md`.
 
-Mantenha o registro de quem tem acesso em `OFICIAL/ACESSOS-PORTAL.md`. O registro é nosso; a
-lista que vale é a do Cloudflare.
+**O que este desenho não dá,** e é bom saber antes de precisar: senha é compartilhada, então
+não há registro de quem entrou, e quem tem a senha pode repassá-la. Para documentação de
+contrato, sem dado de paciente, o risco é aceitável. Se um dia precisar de acesso por pessoa,
+com log e revogação individual, o caminho é o Cloudflare Access — que tem plano gratuito —, e
+a migração é trocar esta função pelas políticas do Access, sem tocar no conteúdo.
 
 ## Atualizar a documentação
 
