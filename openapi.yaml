@@ -39,8 +39,12 @@ tags:
   description: Emissão do Bearer token do Barramento (credenciais em headers `client_id`/`client_secret`/`grant_type`).
 - name: Neoh→HIS · Dados de Referência
   description: Endpoint único /dados-referencia com 19 entidades de lookup selecionadas por `entidade`.
-- name: Neoh→HIS · Agenda & Mapa
-  description: Consulta de disponibilidade, geração de horários, atualização e cancelamento de agenda, mapa cirúrgico.
+- name: Neoh→HIS · Agenda
+  description: "Consulta e atualização da agenda cirúrgica do paciente no HIS: localizar a agenda, atualizar a cabeça do agendamento e a busca legada por unidade e sequência."
+- name: Neoh→HIS · Mapa Cirúrgico
+  description: "Leitura da ocupação do centro cirúrgico: o mapa de horários e equipamentos de um bloco, e a geração das vagas livres a partir dele."
+- name: Neoh→HIS · Suspensão de Cirurgia
+  description: "Suspensão de uma cirurgia já agendada, sem cancelá-la. Específico do MV: o Neoh envia o motivo da suspensão e o aviso cirúrgico continua existindo no HIS."
 - name: Neoh→HIS · Consulta de Paciente
   description: "Localizar um paciente que já existe no HIS, antes de montar o pedido. A busca tem dois modos e muda de forma conforme o perfil de integração do hospital."
 - name: Neoh→HIS · Cadastro de Paciente
@@ -258,7 +262,7 @@ paths:
   /agenda-disponivel:
     get:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Agenda
       operationId: agendaDisponivel
       summary: IDs de agenda disponíveis para uma sala/data
       security:
@@ -302,7 +306,7 @@ paths:
   /gerar-horario-livre:
     get:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Mapa Cirúrgico
       operationId: gerarHorarioLivre
       summary: Gera vagas livres (fire-and-forget)
       security:
@@ -353,7 +357,7 @@ paths:
   /agenda-paciente:
     post:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Agenda
       operationId: atualizarAgendaPaciente
       summary: Atualiza a cabeça da agenda cirúrgica do paciente
       security:
@@ -547,7 +551,7 @@ paths:
   /suspender:
     post:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Suspensão de Cirurgia
       operationId: suspenderCirurgia
       summary: Suspende a cirurgia agendada
       description: >
@@ -583,7 +587,7 @@ paths:
   /mapa-cirurgico:
     get:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Mapa Cirúrgico
       operationId: mapaCirurgico
       summary: Mapa de horários e equipamentos de um bloco
       security:
@@ -2133,7 +2137,7 @@ paths:
   /busca-agenda:
     post:
       tags:
-      - Neoh→HIS · Agenda & Mapa
+      - Neoh→HIS · Agenda
       operationId: buscaAgenda
       summary: Busca agenda por unidade/sequência/status (legada)
       security:
