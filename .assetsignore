@@ -1,0 +1,10 @@
+# Nao publicar como conteudo do site.
+.git
+.git/**
+functions
+functions/**
+worker.js
+acesso.js
+wrangler.jsonc
+.assetsignore
+README-deploy.md

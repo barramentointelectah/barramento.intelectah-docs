@@ -15,7 +15,10 @@ o contrato publicado é conferido campo a campo contra ele a cada alteração.
 | `index.html` | Página neutra da raiz: não leva a lugar nenhum. Gerada. |
 | `_headers` | Cabeçalhos do Cloudflare Pages: `noindex` e sem cache do contrato. |
 | `robots.txt` | Bloqueia indexação. |
-| `functions/_middleware.js` | **O controle de acesso.** Roda no Cloudflare antes de servir qualquer arquivo. |
+| `acesso.js` | **As regras de acesso.** Quem decide quem entra em qual caminho. |
+| `worker.js` + `wrangler.jsonc` | Ponto de entrada quando o projeto é um **Worker com assets**. |
+| `functions/_middleware.js` | Ponto de entrada quando o projeto é do tipo **Pages**. |
+| `.assetsignore` | Tira do site os arquivos acima, que são código, não conteúdo. |
 | `.nojekyll` | Herança do GitHub Pages; inofensivo. |
 
 Não existe página "Geral": o que vale para qualquer HIS é publicado **dentro** da página de
@@ -75,19 +78,26 @@ configurar tranca, não abre.
 
 ## Publicar (uma vez)
 
-**1. Criar o projeto no Cloudflare Pages**
+**1. Criar o projeto, e saber de que tipo ele é**
 
-*Workers & Pages → Create → Pages → Connect to Git* → repositório
-`barramentointelectah/barramento.intelectah-docs`, branch `main`.
+O Cloudflare hoje cria dois tipos de projeto a partir de um repositório, e **o controle de
+acesso entra por portas diferentes em cada um**:
 
-| Campo | Valor |
-|---|---|
-| Framework preset | None |
-| Build command | *(vazio)* |
-| Build output directory | `/` |
+| Tipo | Como reconhecer | Quem roda |
+|---|---|---|
+| **Pages** | o painel fala em *Functions*, o endereço é `*.pages.dev` | `functions/_middleware.js` |
+| **Worker com assets** | o painel tem abas *Bindings* e *Observability*, e diz *"a Worker that only has static assets"* | `worker.js` + `wrangler.jsonc` |
 
-O Cloudflare encontra a pasta `functions/` sozinho e passa a rodá-la em cada requisição.
-Guarde o endereço `<projeto>.pages.dev` que nasce do primeiro deploy.
+Os dois estão prontos no repositório e chamam as mesmas regras, em `acesso.js`. Não é preciso
+escolher antes: o tipo do projeto decide qual entra em uso.
+
+*Workers & Pages → Create → Connect to Git* → repositório
+`barramentointelectah/barramento.intelectah-docs`, branch `main`. Se a tela oferecer **Pages**,
+prefira: build command vazio, output directory `/`, framework preset None.
+
+Se o projeto for um Worker, confira em *Settings → Build* que o comando de deploy é o do
+wrangler (o padrão, `npx wrangler deploy`) — é ele que lê o `wrangler.jsonc` e liga o
+`run_worker_first`, sem o qual o arquivo estático sairia sem passar pela verificação.
 
 **2. Cadastrar as senhas**
 

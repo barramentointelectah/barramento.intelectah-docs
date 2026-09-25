@@ -1,0 +1,14 @@
+{
+  // Publicacao como Worker com assets estaticos.
+  // Num projeto do tipo Pages este arquivo e ignorado, e quem vale e
+  // functions/_middleware.js. Os dois chamam as mesmas regras, em acesso.js.
+  "name": "barramento-intelectah-docs",
+  "compatibility_date": "2026-09-25",
+  "main": "./worker.js",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    // sem isto o arquivo estatico seria entregue sem passar pela verificacao
+    "run_worker_first": true
+  }
+}
