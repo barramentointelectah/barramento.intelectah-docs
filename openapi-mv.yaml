@@ -71,10 +71,60 @@ tags:
   description: Criação/atualização/remoção dos itens de um Pedido Cirúrgico. 15 áreas sob /integrar-pedido/*,
     todas POST, roteando por campo `action` no item.
 - name: Neoh→HIS · Reintegrar Pedido
-  description: 'Correção de um pedido JÁ integrado, item a item, sem reenviar o pedido inteiro. Duas formas
-    convivem no código: as rotas de /integrar-pedido/* reenviadas com UM item e `action` = new/update/delete,
-    e as seis rotas desta seção, que têm URL própria por hospital e autenticação Basic. Nenhuma delas
-    é escolhida por HIS no código: valem se o hospital tiver a URL configurada.'
+  description: 'Correção de um pedido JÁ integrado, item a item, sem reenviar o pedido inteiro. Quem dispara
+    é a edição de um pedido na tela: `ReintegracaoApp` decide a operação e o barramento traduz para uma
+    das duas formas abaixo.
+
+
+    **1. As rotas de `/integrar-pedido/*`, reenviadas com UM item e o campo `action`.** São exatamente
+    as mesmas rotas da carga inicial — o que muda é que a lista traz um item só e ele carrega a ação:
+
+
+    | Operação na tela | Rota | `action` |
+
+    |---|---|---|
+
+    | Incluir equipamento | `/integrar-pedido/cirurgia-equipamento` | `new` |
+
+    | Remover equipamento | `/integrar-pedido/cirurgia-equipamento` | `delete` |
+
+    | Incluir / editar sangue | `/integrar-pedido/cirurgia-sangue` | `new` / `update` |
+
+    | Remover sangue | `/integrar-pedido/cirurgia-sangue` | `delete` |
+
+    | Incluir / remover exame | `/integrar-pedido/cirurgia-exame` | `new` / `delete` |
+
+    | Incluir / editar caixa | `/integrar-pedido/cirurgia-caixas` | `new` / `update` |
+
+    | Remover caixa | `/integrar-pedido/cirurgia-caixas` | `delete` |
+
+    | Incluir / editar / remover OPME | `/integrar-pedido/cirurgia-opme` | `new` / `update` / `delete`
+    |
+
+    | Incluir / editar / remover material | `/integrar-pedido/cirurgia-material` | `new` / `update` /
+    `delete` |
+
+    | Incluir / editar / remover procedimento | `/integrar-pedido/cirurgia-procedimento` | `new` / `update`
+    / `delete` |
+
+    | Trocar o procedimento principal | `/integrar-pedido/cirurgia-procedimento` | os três, na mesma chamada
+    |
+
+    | Reintegrar o pedido inteiro | `/agenda-paciente` | — (reenvia o cabeçalho) |
+
+
+    **Editar equipamento não envia nada ao HIS:** o código só reintegra inclusão e remoção de equipamento.
+
+
+    **2. As seis rotas desta seção**, com URL própria por hospital e autenticação Basic. Se o hospital
+    não tiver a URL configurada, elas não fazem nada — retornam em silêncio.
+
+
+    Nenhum dos dois caminhos é escolhido por HIS no código: valem conforme o hospital tenha o parâmetro
+    `barramento_external_api` ligado e as URLs configuradas. Vale saber, porém, que num hospital MV a
+    **carga inicial** não passa por nenhuma rota de `/integrar-pedido/cirurgia-*` — ela vai inteira num
+    único POST para `/integrar-pedido/agenda-cirurgica`. As rotas por item são o desenho do Tasy, e é
+    nelas que a edição cai de qualquer jeito.'
 - name: Neoh→HIS · Edição de Pedido
   description: Endpoints standalone usados na EDIÇÃO de um pedido já existente, fora da orquestração de
     /integrar-pedido.
