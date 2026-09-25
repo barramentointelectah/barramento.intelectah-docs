@@ -129,9 +129,13 @@ tags:
     **carga inicial** não passa por nenhuma rota de `/integrar-pedido/cirurgia-*` — ela vai inteira num
     único POST para `/integrar-pedido/agenda-cirurgica`. As rotas por item são o desenho do Tasy, e é
     nelas que a edição cai de qualquer jeito.'
-- name: Neoh→HIS · Edição de Pedido
-  description: Endpoints standalone usados na EDIÇÃO de um pedido já existente, fora da orquestração de
-    /integrar-pedido.
+- name: Neoh→HIS · Troca de Fase
+  description: 'Avanço do pedido pelo workflow do HIS: troca de fase do pedido e, no perfil MDM, também
+    o estágio da autorização. O cancelamento de guia usa este mesmo mecanismo — mover a guia para o estágio
+    de cancelamento configurado no hospital.'
+- name: Neoh→HIS · Integrar Anexo
+  description: 'Envio de anexos do pedido para o HIS. Há duas formas, e o hospital usa uma ou outra: por
+    caminho de arquivo, ou com o arquivo embutido em Base64.'
 - name: Neoh→HIS · Cancelamento
   description: Cancelamento de um pedido cirúrgico já integrado e das guias de convênio que ele gerou.
     O cancelamento do agendamento tem três caminhos no código, escolhidos por configuração do hospital
@@ -2020,7 +2024,7 @@ paths:
   /status-autorizacao:
     post:
       tags:
-      - Neoh→HIS · Cancelamento
+      - Neoh→HIS · Troca de Fase
       operationId: statusAutorizacao
       summary: Cancela as guias de autorização do convênio
       description: '**Escopo:** especifico do **Tasy**.
@@ -2090,9 +2094,9 @@ paths:
   /troca-fase:
     post:
       tags:
-      - Neoh→HIS · Edição de Pedido
+      - Neoh→HIS · Troca de Fase
       operationId: trocaFase
-      summary: Troca a fase da agenda (perfil Token)
+      summary: Troca a fase do pedido (perfil Token)
       description: '**Escopo:** comum a todos os HIS.
 
 
@@ -2145,9 +2149,9 @@ paths:
       x-escopo: geral
     put:
       tags:
-      - Neoh→HIS · Edição de Pedido
+      - Neoh→HIS · Troca de Fase
       operationId: trocaFaseMdm
-      summary: Troca fase da autorização e/ou status da agenda (perfil MDM)
+      summary: Troca fase da autorização e/ou status do pedido (perfil MDM)
       description: '**Escopo:** especifico do **Tasy**.
 
 
@@ -2219,7 +2223,7 @@ paths:
   /integrar-anexo:
     post:
       tags:
-      - Neoh→HIS · Edição de Pedido
+      - Neoh→HIS · Integrar Anexo
       operationId: integrarAnexo
       summary: Anexo por caminho de arquivo (inclusão e remoção)
       description: '**Escopo:** especifico do **Tasy**.
@@ -2290,7 +2294,7 @@ paths:
   /integrar-anexo-blob:
     post:
       tags:
-      - Neoh→HIS · Edição de Pedido
+      - Neoh→HIS · Integrar Anexo
       operationId: integrarAnexoBlob
       summary: Anexo com o arquivo em Base64 (uma requisição por arquivo)
       description: '**Escopo:** comum a todos os HIS.
