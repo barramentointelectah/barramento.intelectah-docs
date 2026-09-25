@@ -12,10 +12,10 @@
   Content-Type: text/yaml; charset=utf-8
   Cache-Control: no-store
 
-/openapi-tasy.yaml
+/tasy/openapi-tasy.yaml
   Content-Type: text/yaml; charset=utf-8
   Cache-Control: no-store
 
-/openapi-mv.yaml
+/mv/openapi-mv.yaml
   Content-Type: text/yaml; charset=utf-8
   Cache-Control: no-store
