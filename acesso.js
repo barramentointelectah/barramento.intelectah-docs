@@ -76,8 +76,39 @@ function lerCredenciais(cabecalho) {
   return { usuario: texto.slice(0, corte), senha: texto.slice(corte + 1) };
 }
 
-function pedirSenha(nome) {
-  return new Response("Acesso restrito.\n", {
+const TODAS_AS_VARIAVEIS = [
+  "SENHA_INTELECTAH_TASY", "SENHA_INTEGRADOR_TASY",
+  "SENHA_INTELECTAH_MV", "SENHA_INTEGRADOR_MV",
+  "SENHA_INTELECTAH_DEPARA", "SENHA_INTELECTAH_RAIZ",
+];
+
+/**
+ * Corpo do 401 com o que o servidor esta enxergando — sem NUNCA revelar valor
+ * de senha, so quais variaveis existem. Sai apenas quando a URL pede ?diag=1,
+ * e so para quem ainda nao entrou, entao nao vaza nada de quem esta dentro.
+ */
+function diagnostico(url, regra, env, usuario) {
+  const definidas = TODAS_AS_VARIAVEIS.filter((v) => typeof env[v] === "string" && env[v].length > 0);
+  const faltando = TODAS_AS_VARIAVEIS.filter((v) => !definidas.includes(v));
+  const linhas = [
+    "",
+    "--- diagnostico ---",
+    "caminho pedido:        " + url.pathname,
+    "regra que casou:       " + regra.nome,
+    "perfis aceitos aqui:   " + Object.keys(regra.perfis).join(", "),
+    "variavel consultada:   " + (usuario ? (regra.perfis[usuario.toLowerCase()] || "(nenhuma: perfil nao vale neste caminho)") : "(sem usuario)"),
+    "senhas configuradas:   " + (definidas.length ? definidas.join(", ") : "NENHUMA — o servidor nao recebeu nenhuma variavel"),
+    "faltando configurar:   " + (faltando.length ? faltando.join(", ") : "nenhuma"),
+    "",
+    "Se a variavel consultada aparece em 'faltando configurar', o problema e de",
+    "configuracao, nao de senha: cadastre como Secret e refaca o deploy.",
+    "",
+  ];
+  return linhas.join("\n");
+}
+
+function pedirSenha(nome, extra) {
+  return new Response("Acesso restrito.\n" + (extra || ""), {
     status: 401,
     headers: {
       "WWW-Authenticate": `Basic realm="${nome}", charset="UTF-8"`,
@@ -92,18 +123,21 @@ function pedirSenha(nome) {
  * Serve tanto ao Pages (functions/_middleware.js) quanto ao Worker (worker.js).
  */
 export function barrar(request, env) {
-  const caminho = new URL(request.url).pathname;
-  const regra = escolherRegra(caminho);
-
+  const url = new URL(request.url);
+  const regra = escolherRegra(url.pathname);
   const credenciais = lerCredenciais(request.headers.get("Authorization"));
-  if (!credenciais) return pedirSenha(regra.nome);
+  const pedir = () => pedirSenha(
+    regra.nome,
+    url.searchParams.has("diag") ? diagnostico(url, regra, env, credenciais && credenciais.usuario) : "");
+
+  if (!credenciais) return pedir();
 
   const variavel = regra.perfis[credenciais.usuario.toLowerCase()];
   // Perfil que nao existe neste caminho, ou senha nao configurada: nega.
   // Fechado por omissao - esquecer de preencher uma variavel tranca, nao abre.
-  if (!variavel) return pedirSenha(regra.nome);
+  if (!variavel) return pedir();
   const esperada = env[variavel];
-  if (!esperada || !saoIguais(credenciais.senha, esperada)) return pedirSenha(regra.nome);
+  if (!esperada || !saoIguais(credenciais.senha, esperada)) return pedir();
 
   return null;
 }

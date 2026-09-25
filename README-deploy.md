@@ -110,6 +110,20 @@ de quem usa. Um gerador de senha de 24 caracteres serve.
 Depois de salvar, **refaça o deploy** (*Deployments → Retry deployment*): variável nova só
 vale para deploys seguintes.
 
+**Quando pedir senha e não aceitar nenhuma**
+
+Abra o mesmo endereço com `?diag=1` no fim — por exemplo `<site>/mv/?diag=1` — e aperte
+**Esc** ou **Cancel** na caixa de login. A página que aparece diz qual regra casou, qual
+variável o servidor foi consultar e **quais variáveis ele está enxergando**. Nunca mostra
+valor de senha, e só aparece para quem ainda não entrou.
+
+Se a variável consultada estiver em *faltando configurar*, o problema é de configuração, não
+de senha. As duas causas de longe mais comuns:
+
+- a variável foi cadastrada como **Text** em vez de **Secret** — um `wrangler deploy` pode
+  apagar variáveis de texto criadas pelo painel; Secret sobrevive;
+- a variável foi salva mas **o deploy não foi refeito** depois.
+
 **3. Testar**
 
 Numa janela anônima:
