@@ -45,6 +45,8 @@ tags:
   description: Localização e cadastro (simplificado/completo) do paciente no HIS.
 - name: Neoh→HIS · Integrar Pedido
   description: Criação/atualização/remoção dos itens de um Pedido Cirúrgico. 15 áreas sob /integrar-pedido/*, todas POST, roteando por campo `action` no item.
+- name: Neoh→HIS · Reintegrar Pedido
+  description: 'Correção de um pedido JÁ integrado, item a item, sem reenviar o pedido inteiro. Duas formas convivem no código: as rotas de /integrar-pedido/* reenviadas com UM item e `action` = new/update/delete, e as seis rotas desta seção, que têm URL própria por hospital e autenticação Basic. Nenhuma delas é escolhida por HIS no código: valem se o hospital tiver a URL configurada.'
 - name: Neoh→HIS · Edição de Pedido
   description: Endpoints standalone usados na EDIÇÃO de um pedido já existente, fora da orquestração de /integrar-pedido.
 - name: HIS→Neoh · Callbacks
@@ -2847,6 +2849,155 @@ paths:
                 $ref: '#/components/schemas/MensagemResposta'
               example:
                 Message: Mensagem de erro
+  /reintegrar/procedimento-novo:
+    post:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarProcedimentoNovo
+      summary: Acrescenta procedimentos a um pedido já integrado
+      description: 'Enviado quando o usuário inclui procedimentos num pedido que já foi para o HIS. O corpo é uma **lista** — um objeto por procedimento incluído.'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReintegrarProcedimentoItem'
+            example:
+            - nrSeqAgenda: '3688948222'
+              nmUsuario: NEOH
+              nrSeqProcInterno: 40201015
+              cdEstabelecimento: 61
+              ieLado: D
+              cdMedico: '1234'
+              cdConvenio: '9'
+              cdPlano: '3'
+              qtMinProc: 1
+      responses:
+        '200':
+          description: Procedimentos acrescentados.
+        '401':
+          description: Token inválido ou expirado.
+  /reintegrar/procedimento-principal:
+    post:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarProcedimentoPrincipal
+      summary: Troca o procedimento principal do pedido
+      description: 'Mesma lista da rota de inclusão. O Neoh monta o corpo passando `principal = true`, mas **o objeto enviado é idêntico** ao das outras duas rotas: o código tem um `if/else` cujos dois ramos constroem o mesmo objeto. Quem diferencia é a URL chamada, não o conteúdo.'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReintegrarProcedimentoItem'
+      responses:
+        '200':
+          description: Procedimento principal trocado.
+        '401':
+          description: Token inválido ou expirado.
+  /reintegrar/procedimento-remover:
+    post:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarProcedimentoRemover
+      summary: Remove procedimentos de um pedido já integrado
+      description: 'POST, não DELETE: a remoção é informada pela URL chamada, e o corpo é a mesma lista das outras duas rotas.'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReintegrarProcedimentoItem'
+      responses:
+        '200':
+          description: Procedimentos removidos.
+        '401':
+          description: Token inválido ou expirado.
+  /reintegrar/campos-agendamento:
+    put:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarCamposAgendamento
+      summary: Corrige campos do agendamento já integrado
+      description: 'Único **PUT** do grupo. Disparado quando o usuário edita duração, anestesista, classificação, previsão de internação ou caráter da cirurgia num pedido já integrado. O `caraterCirurgia` sai de uma conversão para os valores do Tasy; `cdAnestesista` vai como `null` quando o Neoh tem `"0"`.'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReintegrarCamposAgendamentoRequest'
+            example:
+              nrSeqAgenda: 3688948222
+              nrMinutoDuracao: 120
+              cdAnestesista: '4321'
+              nmUsuario: NEOH
+              dtChegadaPrev: '2026-09-30 07:00:00'
+              nrSeqClassifAgenda: 2
+              caraterCirurgia: E
+      responses:
+        '200':
+          description: Campos atualizados.
+        '401':
+          description: Token inválido ou expirado.
+  /reintegrar/equipamento-novo:
+    post:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarEquipamentoNovo
+      summary: Acrescenta um equipamento a um pedido já integrado
+      description: Um equipamento por chamada.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReintegrarEquipamentoRequest'
+            example:
+              nrSeqAgenda: 3688948222
+              cdEquipamento: 12
+              quantidade: 1
+              nmUsuario: NEOH
+      responses:
+        '200':
+          description: Equipamento acrescentado.
+        '401':
+          description: Token inválido ou expirado.
+  /reintegrar/equipamento-remover:
+    post:
+      tags:
+      - Neoh→HIS · Reintegrar Pedido
+      operationId: reintegrarEquipamentoRemover
+      summary: Remove um equipamento de um pedido já integrado
+      description: 'POST, não DELETE, e com o mesmo corpo da inclusão — quem diferencia é a URL chamada.'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReintegrarEquipamentoRequest'
+      responses:
+        '200':
+          description: Equipamento removido.
+        '401':
+          description: Token inválido ou expirado.
 components:
   securitySchemes:
     bearerAuth:
@@ -2864,6 +3015,88 @@ components:
       name: client_secret
       description: Callbacks HIS→Neoh. Fornecido pela Intelectah por ambiente.
   schemas:
+    ReintegrarProcedimentoItem:
+      type: object
+      description: 'Item de procedimento nas três rotas de reintegração (`SolicitacaoProcedimentoBarramentoDTO`). O mesmo objeto serve para acrescentar, trocar o principal e remover.'
+      required:
+      - nrSeqAgenda
+      - nmUsuario
+      - nrSeqProcInterno
+      - cdEstabelecimento
+      properties:
+        nrSeqAgenda:
+          type: string
+          description: Código do aviso cirúrgico, enviado como texto.
+        nmUsuario:
+          type: string
+          description: Login do usuário no HIS.
+        nrSeqProcInterno:
+          type: integer
+          format: int64
+          description: Código do procedimento na tabela interna do HIS.
+        cdEstabelecimento:
+          type: integer
+          description: Código corporativo da unidade.
+        ieLado:
+          type: string
+          description: Lateralidade, já convertida para o valor que o HIS espera.
+        cdMedico:
+          type: string
+          description: Código do médico no HIS.
+        cdConvenio:
+          type: string
+        cdCategoria:
+          type: string
+          description: 'Declarado no objeto mas **nunca preenchido** pelo Neoh — vai sempre nulo.'
+        cdPlano:
+          type: string
+        qtMinProc:
+          type: integer
+          description: Quantidade do procedimento.
+    ReintegrarCamposAgendamentoRequest:
+      type: object
+      properties:
+        nrSeqAgenda:
+          type: integer
+          format: int64
+          description: Código do aviso cirúrgico.
+        nrMinutoDuracao:
+          type: integer
+          description: Duração da cirurgia, em minutos.
+        cdAnestesista:
+          type: string
+          nullable: true
+          description: 'Código do anestesista; vai `null` quando o Neoh não tem anestesista definido.'
+        nmUsuario:
+          type: string
+        dtChegadaPrev:
+          type: string
+          description: 'Previsão de internação, no formato `yyyy-MM-dd HH:mm:ss`.'
+        nrSeqClassifAgenda:
+          type: integer
+          description: Classificação da agenda.
+        caraterCirurgia:
+          type: string
+          description: Caráter do atendimento, convertido para o valor do Tasy.
+    ReintegrarEquipamentoRequest:
+      type: object
+      required:
+      - nrSeqAgenda
+      - cdEquipamento
+      - quantidade
+      - nmUsuario
+      properties:
+        nrSeqAgenda:
+          type: integer
+          format: int64
+          description: Código do aviso cirúrgico.
+        cdEquipamento:
+          type: integer
+          format: int64
+        quantidade:
+          type: integer
+        nmUsuario:
+          type: string
     RespostaErroNeoh:
       type: object
       description: Envelope de erro padrão do Barramento (WrapError, incondicional).
